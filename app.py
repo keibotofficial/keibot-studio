@@ -15,6 +15,23 @@ from datetime import datetime
 import requests
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 
+# ==========================================
+# 🛡️ AUTO-SETUP DEPENDENCIES (ANTI-GAGAL)
+# ==========================================
+# Fitur ini akan menginstall FFMPEG otomatis secara diam-diam
+# jika klien menggunakan VPS baru yang belum terinstall FFMPEG.
+def auto_setup_dependencies():
+    if shutil.which("ffmpeg") is None:
+        try:
+            print("⚙️ KeiBot Auto-Setup: Menginstal FFMPEG di latar belakang...")
+            subprocess.run(["apt-get", "update"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["apt-get", "install", "-y", "ffmpeg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("✅ KeiBot Auto-Setup: FFMPEG siap!")
+        except:
+            pass
+auto_setup_dependencies()
+# ==========================================
+
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
@@ -81,7 +98,7 @@ def upload_secret():
 def generate_tv_link():
     if not os.path.exists(CLIENT_SECRETS_FILE):
         return jsonify({"auth_url": "", "error": "File client_secret.json belum diupload!"})
-    # Berikan link full (otomatis menyesuaikan IP / Domain Anda)
+    # Berikan link full (otomatis menyesuaikan IP / Domain)
     return jsonify({"auth_url": f"http://{request.host}/device_login"})
 
 @app.route('/device_login')
@@ -363,7 +380,9 @@ def background_worker():
                 except Exception as e: print("Warning Playlist:", e)
                 move_to_history(task_id, f"Tayang! ✅ <a href='https://youtu.be/{video_id}' target='_blank'>[Lihat]</a>")
             else: move_to_history(task_id, f"Render Selesai ✅ <a href='/{out_file}' target='_blank'>[Download]</a>")
-        except Exception as e: move_to_history(task_id, f"Gagal/Dibatalkan ❌")
+        except Exception as e: 
+            # Fitur Laporan Error Otomatis yang jelas
+            move_to_history(task_id, f"Gagal ❌ (Detail: {str(e)})")
         finally: 
             try: os.remove(f"uploads/base_a_{task_id}.mp3"); os.remove(f"uploads/base_v_{task_id}.mp4")
             except: pass
@@ -410,7 +429,8 @@ def run_live_stream(task_id, stream_key, audio_path, bg_paths, start_time_str, e
         else: move_to_history(task_id, "Live Selesai 🧹")
     except Exception as e:
         active_stream_keys.discard(stream_key)
-        move_to_history(task_id, f"Live Gagal ❌")
+        # Fitur Laporan Error Otomatis yang jelas
+        move_to_history(task_id, f"Live Gagal ❌ (Detail: {str(e)})")
 
 # ==========================================
 # 📊 API ENDPOINTS
