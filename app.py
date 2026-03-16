@@ -227,8 +227,14 @@ def background_worker():
             for d in active_tasks:
                 if d['id'] == task_id: d['status'] = "Menyiapkan Base Audio ⚙️"
             base_audio = f"uploads/base_a_{task_id}.mp3"; c_txt = f"uploads/c_{task_id}.txt"
+            
+            # --- FIX PERTAMA (VOD AUDIO) ---
             with open(c_txt, 'w', encoding='utf-8') as f:
-                for ap in task['audio_paths']: f.write(f"file '{os.path.abspath(ap).replace('\\', '/')}'\n")
+                for ap in task['audio_paths']:
+                    clean_ap = os.path.abspath(ap).replace('\\', '/')
+                    f.write(f"file '{clean_ap}'\n")
+            # -------------------------------
+
             subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', c_txt, '-c', 'copy', base_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             audio = AudioBrain(); audio.load(base_audio); base_dur = audio.duration if audio.duration > 0 else 10
             
@@ -244,8 +250,14 @@ def background_worker():
                 for d in active_tasks:
                     if d['id'] == task_id: d['status'] = f"Menggandakan Video {loop_count}x 🚀"
                 loop_txt = f"uploads/loop_{task_id}.txt"
+
+                # --- FIX KEDUA (VOD LOOP) ---
                 with open(loop_txt, 'w', encoding='utf-8') as f:
-                    for _ in range(loop_count): f.write(f"file '{os.path.abspath(base_video).replace('\\', '/')}'\n")
+                    for _ in range(loop_count):
+                        clean_base = os.path.abspath(base_video).replace('\\', '/')
+                        f.write(f"file '{clean_base}'\n")
+                # ----------------------------
+
                 subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', loop_txt, '-c', 'copy', out_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else: shutil.copy(base_video, out_file)
 
@@ -401,8 +413,14 @@ def handle_schedule_live():
 
     metadata = {"channel_yt_id": yt_id, "title": request.form.get('title', ''), "description": request.form.get('description', ''), "tags": request.form.get('tags', ''), "thumbnail_path": thumb_path}
     m_audio = f"uploads/live_{t_id}/m.mp3"; c_txt = f"uploads/live_{t_id}/c.txt"
+    
+    # --- FIX KETIGA (LIVE AUDIO) ---
     with open(c_txt, 'w') as f:
-        for ap in a_ps: f.write(f"file '{os.path.abspath(ap).replace('\\', '/')}'\n")
+        for ap in a_ps:
+            clean_ap = os.path.abspath(ap).replace('\\', '/')
+            f.write(f"file '{clean_ap}'\n")
+    # -------------------------------
+
     subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', c_txt, '-c', 'copy', m_audio])
     
     active_tasks.append({"id": t_id, "type": "🔴 LIVE", "title": metadata['title'], "time": f"Mulai: {request.form.get('schedule_start').replace('T', ' ')}", "status": "In Queue ⏳"})
@@ -410,4 +428,5 @@ def handle_schedule_live():
     return jsonify({"status": "success", "message": "Live Engine Dijadwalkan!"})
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False, port=5000)
+    # --- FIX KEEMPAT (SERVER AKSES PUBLIK) ---
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
