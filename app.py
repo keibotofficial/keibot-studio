@@ -81,7 +81,8 @@ def upload_secret():
 def generate_tv_link():
     if not os.path.exists(CLIENT_SECRETS_FILE):
         return jsonify({"auth_url": "", "error": "File client_secret.json belum diupload!"})
-    return jsonify({"auth_url": "/device_login"})
+    # Berikan link full (otomatis menyesuaikan IP / Domain Anda)
+    return jsonify({"auth_url": f"http://{request.host}/device_login"})
 
 @app.route('/device_login')
 def device_login():
