@@ -142,14 +142,14 @@
             <h2 style="color:var(--secondary); font-size:18px; margin-bottom:5px;">🔴 Active Tasks: LIVE STREAMING</h2>
             <div style="overflow-x: auto;">
                 <table style="margin-bottom:40px; min-width: 800px;">
-                    <thead><tr><th width="5%">ID</th><th width="35%">JUDUL</th><th width="20%">JADWAL / WAKTU MATI</th><th width="20%">STATUS</th><th width="10%">AKSI</th></tr></thead>
+                    <thead><tr><th width="5%">ID</th><th width="35%">JUDUL & BAHAN</th><th width="20%">JADWAL / WAKTU MATI</th><th width="20%">STATUS PROSES</th><th width="10%">AKSI</th></tr></thead>
                     <tbody id="tabelAktifLive"></tbody>
                 </table>
             </div>
             <h2 style="color:var(--primary); font-size:18px; margin-bottom:5px;">📺 Active Tasks: VOD RENDER & UPLOAD</h2>
             <div style="overflow-x: auto;">
                 <table style="margin-bottom:50px; min-width: 800px;">
-                    <thead><tr><th width="5%">ID</th><th width="35%">JUDUL</th><th width="20%">JADWAL TAYANG</th><th width="20%">STATUS</th><th width="10%">AKSI</th></tr></thead>
+                    <thead><tr><th width="5%">ID</th><th width="35%">JUDUL & BAHAN</th><th width="20%">JADWAL TAYANG</th><th width="20%">STATUS PROSES</th><th width="10%">AKSI</th></tr></thead>
                     <tbody id="tabelAktifVOD"></tbody>
                 </table>
             </div>
@@ -215,10 +215,10 @@
                     <span style="color:var(--primary); font-weight:bold; font-size:12px; letter-spacing:1px;">📝 YOUTUBE METADATA</span>
                     <div class="grid-3" style="margin-top: 15px;"><div style="grid-column: span 2;"><label style="font-weight:bold; color:var(--text-muted);">Judul Video</label><input type="text" name="title" required></div><div><label style="font-weight:bold; color:var(--text-muted);">Thumbnail Custom</label><input type="file" name="thumbnail" accept=".jpg,.png,.jpeg"></div></div>
                     <div class="grid-3" style="margin-top: 15px;"><div style="grid-column: span 2;"><label style="font-weight:bold; color:var(--text-muted);">Deskripsi Video</label><textarea name="description" rows="4"></textarea></div><div><label style="font-weight:bold; color:var(--text-muted);">Tags (Pisahkan koma)</label><input type="text" name="tags"><label style="margin-top:10px; font-weight:bold; color:var(--text-muted);">Pilih Playlist YouTube</label><select name="playlist" id="vod_playlist_select"><option value="">-- Pilih Channel Terlebih Dahulu --</option></select></div></div>
-                    <div><label style="margin-top:15px; font-weight:bold; color:var(--text-muted);">Jadwal Tayang (Schedule Time)</label><input type="datetime-local" name="schedule" required></div>
+                    <div><label style="margin-top:15px; font-weight:bold; color:var(--text-muted);">Jadwal Tayang (Schedule Time)</label><input type="datetime-local" name="schedule"></div>
                 </div>
                 <div class="vis-box" id="visVod" style="margin-top:25px;"></div>
-                <button type="submit" class="btn-gold">🚀 TAMBAHKAN KE ANTREAN (ADD TO QUEUE)</button>
+                <button type="submit" class="btn-gold">➕ TAMBAHKAN KE ANTREAN (ADD TO QUEUE)</button>
             </form>
         </div>
 
@@ -247,7 +247,7 @@
                     </div>
                 </div>
                 <div class="vis-box" id="visLive" style="margin-top:25px;"></div>
-                <button type="submit" class="btn-gold" style="background:var(--secondary); color:white;">📡 TAMBAHKAN KE ANTREAN LIVE</button>
+                <button type="submit" class="btn-gold" style="background:var(--secondary); color:white;">➕ TAMBAHKAN KE ANTREAN LIVE</button>
             </form>
         </div>
     </div>
@@ -256,92 +256,118 @@
         let cachedChannels = []; let analyticsData = []; let myChartInstance = null;
 
         // =========================================================================
-        // SISTEM "ANTREAN LOKAL" (MENGIRIM FILE SATU PER SATU KE SERVER)
+        // 🛠️ INTI MESIN ANTREAN: MENIRU SOFTWARE DESKTOP 100%
         // =========================================================================
-        let browserUploadQueue = [];
-        let isUploadingToServer = false;
+        let browserQueue = []; // Troli untuk menampung semua bahan yang belum dikirim
+        let isUploading = false; // Status apakah kurir sedang jalan atau tidak
 
         function submitForm(e, api) { 
             e.preventDefault(); 
-            let formTarget = e.target;
+            let form = e.target;
             
-            // Bungkus data
-            let formData = new FormData(formTarget);
-            let title = formData.get('title') || 'Video Automation';
+            // 1. Kumpulkan semua bahan dan settingan saat tombol diklik
+            let formData = new FormData(form);
             let isVod = api.includes('upload_vod');
-            let fakeId = "Q-" + Math.floor(Math.random() * 9999);
+            let idAntrean = "Q-" + Math.floor(Math.random() * 9999);
+            
+            // Ekstrak Settingan untuk ditampilkan di Tabel Task Monitor!
+            let judul = formData.get('title') || 'Video Tanpa Judul';
+            let jadwal = '';
+            if(isVod) {
+                jadwal = formData.get('schedule') ? formData.get('schedule').replace('T', ' ') : '🚀 Rilis Instan';
+            } else {
+                let start = formData.get('schedule_start') ? formData.get('schedule_start').replace('T', ' ') : '';
+                let end = formData.get('schedule_end') ? formData.get('schedule_end').replace('T', ' ') : '';
+                jadwal = `${start} s/d ${end}`;
+            }
 
-            // 1. TAMBAHKAN KE "TROLI" ANTREAN BROWSER
-            browserUploadQueue.push({
-                id: fakeId,
+            // 2. MASUKKAN KE DALAM ANTREAN (Agar langsung muncul di Task Monitor)
+            browserQueue.push({
+                id: idAntrean,
                 api: api,
-                formData: formData,
-                title: title,
+                dataBahan: formData,
+                judul: judul,
+                jadwal: jadwal,
                 isVod: isVod,
-                status: '⏳ Menunggu Antrean Upload...',
+                status: '⏳ Mengantre untuk Dimasak',
                 progress: 0
             });
 
-            // 2. INSTAN (0 DETIK): Kosongkan Form, Biar Bisa Bikin Antrean Lain
-            formTarget.reset(); 
-            formTarget.querySelectorAll('input[type=range]').forEach(el => el.dispatchEvent(new Event('input'))); 
+            // 3. SELESAI! Bersihkan form langsung saat ini juga!
+            form.reset(); 
+            form.querySelectorAll('input[type=range]').forEach(el => el.dispatchEvent(new Event('input'))); 
+            
+            // 4. Bawa user pindah ke Task Monitor untuk melihat antreannya!
             switchTab('tasks'); 
             
-            // 3. Update Tabel & Panggil Mesin Pengirim
-            updateTasksOnly(); 
-            processBrowserQueue(); 
+            // Render ulang tabel & Panggil Koki untuk mulai memasak
+            renderTableTasks(); 
+            prosesKokiMasak(); 
         }
 
-        // MESIN PENGIRIM BAHAN KE VPS (SATU PER SATU)
-        function processBrowserQueue() {
-            // Jika sedang ngirim file lain, diam saja dan tunggu gilirannya
-            if(isUploadingToServer) return;
+        function prosesKokiMasak() {
+            // Kalau koki sedang masak file lain, suruh file ini nunggu antrean.
+            if(isUploading) return;
 
-            // Cari siapa yang sedang antre paling depan
-            let taskIndex = browserUploadQueue.findIndex(t => t.status.includes('Menunggu'));
-            if(taskIndex === -1) {
-                isUploadingToServer = false; // Antrean habis
-                return;
+            // Cari bahan pertama yang statusnya "Mengantre"
+            let indexBahan = browserQueue.findIndex(t => t.status.includes('Mengantre') || t.status.includes('Gagal'));
+            if(indexBahan === -1) {
+                isUploading = false; 
+                return; // Semua bahan di troli sudah selesai dikirim
             }
 
-            // Mulai proses ngirim
-            isUploadingToServer = true;
-            let currentTask = browserUploadQueue[taskIndex];
-            currentTask.status = '🚀 Sedang Mengirim ke Server... 0%';
-            updateTasksOnly();
+            isUploading = true;
+            let task = browserQueue[indexBahan];
+            task.status = '🚀 Menyiapkan Bahan (Upload)... 0%';
+            renderTableTasks();
 
             let xhr = new XMLHttpRequest();
-            xhr.open("POST", currentTask.api, true);
+            xhr.open("POST", task.api, true);
 
+            // Update indikator persen pelan-pelan
             xhr.upload.onprogress = function(event) {
                 if (event.lengthComputable) {
-                    currentTask.progress = Math.round((event.loaded / event.total) * 100);
-                    currentTask.status = `🚀 Sedang Mengirim ke Server... ${currentTask.progress}%`;
+                    task.progress = Math.round((event.loaded / event.total) * 100);
+                    task.status = `🚀 Menyiapkan Bahan (Upload)... ${task.progress}%`;
+                    renderTableTasks(); // Update tampilan tabel secara real-time
                 }
             };
 
             xhr.onload = function() {
-                // Selesai dikirim! Hapus dari antrean browser (Python yang akan ambil alih di tabel)
-                browserUploadQueue.splice(taskIndex, 1);
-                isUploadingToServer = false;
-                updateTasksOnly();
+                // Selesai di-upload ke server Biznet! Hapus dari antrean lokal
+                browserQueue.splice(indexBahan, 1);
+                isUploading = false;
                 
-                // Lanjut ke antrean berikutnya (jika masih ada)
-                processBrowserQueue(); 
+                // Panggil Python untuk mengambil alih tabel (Karena sekarang tugasnya ada di VPS)
+                fetchDataFromServer(); 
+                
+                // Lanjut masak bahan antrean berikutnya (jika ada)
+                prosesKokiMasak(); 
             };
 
             xhr.onerror = function() {
-                currentTask.status = '❌ Gagal Mengirim Bahan (Cek Koneksi)';
-                isUploadingToServer = false;
-                updateTasksOnly();
-                processBrowserQueue();
+                task.status = '❌ Gagal Upload! Coba lagi.';
+                isUploading = false;
+                renderTableTasks();
             };
 
-            xhr.send(currentTask.formData);
+            xhr.send(task.dataBahan);
+        }
+
+        // FUNGSI UNTUK MEMBATALKAN ANTREAN SEBELUM DI-UPLOAD
+        function batalAntreanLokal(id) {
+            let idx = browserQueue.findIndex(t => t.id === id);
+            if(idx !== -1) {
+                if(browserQueue[idx].status.includes('Upload')) {
+                    alert("Tidak bisa dibatalkan, file ini sedang dalam proses upload ke server!");
+                    return;
+                }
+                browserQueue.splice(idx, 1);
+                renderTableTasks();
+            }
         }
         // =========================================================================
 
-        // CEK STATUS API GOOGLE
         function checkApiStatus() {
             fetch('/api/check_secret').then(r=>r.json()).then(d=>{
                 const badge = document.getElementById('api_status_badge');
@@ -387,51 +413,64 @@
         function fetchPlaylists(yt_id, target_select_id) { const plSelect = document.getElementById(target_select_id); if(!plSelect) return; plSelect.innerHTML = '<option value="">⏳ Mengambil Playlist...</option>'; if(!yt_id) { plSelect.innerHTML = '<option value="">-- Pilih Channel --</option>'; return; } fetch('/api/get_playlists?yt_id=' + yt_id).then(r => r.json()).then(data => { plSelect.innerHTML = '<option value="">-- Tidak Dimasukkan ke Playlist --</option>'; if(data.length === 0) plSelect.innerHTML += '<option value="" disabled>Belum ada playlist</option>'; else data.forEach(pl => plSelect.innerHTML += `<option value="${pl.id}">${pl.title}</option>`); }).catch(() => { plSelect.innerHTML = '<option value="">❌ Gagal mengambil data</option>'; }); }
         let currentBaseSeconds = 0; function formatTime(secs) { const h = Math.floor(secs / 3600); const m = Math.floor((secs % 3600) / 60); const s = Math.floor(secs % 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; } function getAudioDuration(file) { return new Promise((resolve) => { const audio = new Audio(URL.createObjectURL(file)); audio.addEventListener('loadedmetadata', () => resolve(audio.duration)); audio.addEventListener('error', () => resolve(0)); }); } async function calcAudioDuration(inputElem, infoId) { const files = inputElem.files; if(files.length === 0) { currentBaseSeconds = 0; document.getElementById(infoId).innerText = "Durasi Asli: 00:00:00"; updateTotalDuration('vod'); return; } document.getElementById(infoId).innerText = "Menghitung..."; let total = 0; for(let i=0; i<files.length; i++) total += await getAudioDuration(files[i]); currentBaseSeconds = total; document.getElementById(infoId).innerText = "Durasi Asli: " + formatTime(total); updateTotalDuration('vod'); } function updateTotalDuration(mode) { const loops = parseInt(document.getElementById(mode + '_loop_count').value) || 1; document.getElementById(mode + '_total_info').innerText = "Estimasi VOD: " + formatTime(currentBaseSeconds * loops); }
 
-        function initApp() { injectVisualizer('visVod', 'vod'); injectVisualizer('visLive', 'live'); loadChannels(); fetchAnalyticsData(); checkApiStatus(); setInterval(updateTasksOnly, 2000); }
+        function initApp() { injectVisualizer('visVod', 'vod'); injectVisualizer('visLive', 'live'); loadChannels(); fetchAnalyticsData(); checkApiStatus(); setInterval(fetchDataFromServer, 2000); }
 
-        function updateTasksOnly() { 
+        let lastServerData = {active: [], history: []};
+
+        function fetchDataFromServer() {
             fetch('/api/get_schedule').then(r => r.json()).then(data => { 
-                const tbVOD = document.getElementById('tabelAktifVOD'); tbVOD.innerHTML = ''; 
-                const tbLive = document.getElementById('tabelAktifLive'); tbLive.innerHTML = ''; 
-                const tbH = document.getElementById('tabelHistory'); tbH.innerHTML = ''; 
-                let vodCount = 0; let liveCount = 0; 
-
-                // --- 1. TAMPILKAN ANTREAN LOKAL BROWSER (BELUM MASUK VPS) ---
-                browserUploadQueue.forEach(p => {
-                    let row = `<tr>
-                        <td><span style="color:var(--text-muted); font-weight:bold;">${p.id}</span></td>
-                        <td style="color:var(--text-main); font-weight:bold;">${p.title}</td>
-                        <td style="color:var(--text-muted);">---</td>
-                        <td style="color:#00ffcc; font-weight:bold;">${p.status}</td>
-                        <td><button class="btn-stop" disabled style="opacity:0.3; cursor:not-allowed;">TUNGGU</button></td>
-                    </tr>`;
-                    if(p.isVod) { tbVOD.innerHTML += row; vodCount++; }
-                    else { tbLive.innerHTML += row; liveCount++; }
-                });
-
-                // --- 2. TAMPILKAN ANTREAN ASLI (DARI MESIN PYTHON) ---
-                data.active.forEach(t => { 
-                    let btnStop = `<button class="btn-stop" onclick="stopTask(${t.id})">⏹️ STOP</button>`; 
-                    let row = `<tr><td>#${t.id}</td><td style="color:var(--text-main); font-weight:bold;">${t.title}</td><td>${t.time}</td><td style="color:var(--primary); font-weight:bold;">${t.status}</td><td>${btnStop}</td></tr>`; 
-                    if(t.type.includes("VOD")) { tbVOD.innerHTML += row; vodCount++; } 
-                    else { tbLive.innerHTML += row; liveCount++; } 
-                }); 
-
-                if(vodCount === 0) tbVOD.innerHTML = '<tr><td colspan="5" align="center" style="color:var(--text-muted); padding:15px;">Tidak ada VOD di antrean.</td></tr>'; 
-                if(liveCount === 0) tbLive.innerHTML = '<tr><td colspan="5" align="center" style="color:var(--text-muted); padding:15px;">Tidak ada Live Stream berjalan.</td></tr>'; 
-                
-                data.history.forEach(t => { 
-                    let c = t.status.includes('❌') ? 'var(--secondary)' : 'var(--text-muted)'; 
-                    tbH.innerHTML += `<tr><td>#${t.id}</td><td>${t.type}</td><td style="font-weight:bold;">${t.title}</td><td style="color:${c};">${t.status}</td></tr>`; 
-                }); 
-
-                document.getElementById('tm_channels').innerText = cachedChannels.length; 
-                document.getElementById('tm_active').innerText = data.active.length + browserUploadQueue.length; 
-                document.getElementById('tm_history').innerText = data.history.length; 
-            }); 
+                lastServerData = data;
+                renderTableTasks(); // Gabungkan dengan antrean lokal
+            }).catch(e => {});
         }
 
-        function stopTask(id) { if(confirm("Yakin mematikan paksa tugas ini?")) { fetch('/api/stop_task/' + id, {method:'POST'}).then(r=>r.json()).then(d=>{ alert(d.message); updateTasksOnly(); }); } }
+        function renderTableTasks() { 
+            const tbVOD = document.getElementById('tabelAktifVOD'); tbVOD.innerHTML = ''; 
+            const tbLive = document.getElementById('tabelAktifLive'); tbLive.innerHTML = ''; 
+            const tbH = document.getElementById('tabelHistory'); tbH.innerHTML = ''; 
+            let vodCount = 0; let liveCount = 0; 
+
+            // --- 1. RENDER ANTREAN LOKAL (YANG BARU DI-ADD KE QUEUE OLEH USER) ---
+            browserQueue.forEach(p => {
+                let w = p.status.includes('Upload') ? 'var(--primary)' : '#f59e0b'; // Biru kalau upload, kuning kalau antre
+                let btn = p.status.includes('Upload') ? 
+                    `<button class="btn-stop" disabled style="opacity:0.3; cursor:not-allowed;">⏳ UPLOAD</button>` : 
+                    `<button class="btn-stop" style="background:#f59e0b;" onclick="batalAntreanLokal('${p.id}')">❌ BATAL</button>`;
+
+                let row = `<tr>
+                    <td><span style="color:var(--text-muted); font-weight:bold;">${p.id}</span></td>
+                    <td style="color:var(--text-main); font-weight:bold;">${p.judul}</td>
+                    <td style="color:var(--text-muted);">${p.jadwal}</td>
+                    <td style="color:${w}; font-weight:bold;">${p.status}</td>
+                    <td>${btn}</td>
+                </tr>`;
+                
+                if(p.isVod) { tbVOD.innerHTML += row; vodCount++; }
+                else { tbLive.innerHTML += row; liveCount++; }
+            });
+
+            // --- 2. RENDER TUGAS SERVER (YANG SUDAH SAMPAI DI MESIN PYTHON) ---
+            lastServerData.active.forEach(t => { 
+                let btnStop = `<button class="btn-stop" onclick="stopTask(${t.id})">⏹️ STOP</button>`; 
+                let row = `<tr><td>#${t.id}</td><td style="color:var(--text-main); font-weight:bold;">${t.title}</td><td>${t.time}</td><td style="color:var(--primary); font-weight:bold;">${t.status}</td><td>${btnStop}</td></tr>`; 
+                if(t.type.includes("VOD")) { tbVOD.innerHTML += row; vodCount++; } 
+                else { tbLive.innerHTML += row; liveCount++; } 
+            }); 
+
+            if(vodCount === 0) tbVOD.innerHTML = '<tr><td colspan="5" align="center" style="color:var(--text-muted); padding:15px;">Tidak ada VOD di antrean.</td></tr>'; 
+            if(liveCount === 0) tbLive.innerHTML = '<tr><td colspan="5" align="center" style="color:var(--text-muted); padding:15px;">Tidak ada Live Stream berjalan.</td></tr>'; 
+            
+            lastServerData.history.forEach(t => { 
+                let c = t.status.includes('❌') ? 'var(--secondary)' : 'var(--text-muted)'; 
+                tbH.innerHTML += `<tr><td>#${t.id}</td><td>${t.type}</td><td style="font-weight:bold;">${t.title}</td><td style="color:${c};">${t.status}</td></tr>`; 
+            }); 
+
+            document.getElementById('tm_channels').innerText = cachedChannels.length; 
+            document.getElementById('tm_active').innerText = lastServerData.active.length + browserQueue.length; 
+            document.getElementById('tm_history').innerText = lastServerData.history.length; 
+        }
+
+        function stopTask(id) { if(confirm("Yakin mematikan paksa tugas ini?")) { fetch('/api/stop_task/' + id, {method:'POST'}).then(r=>r.json()).then(d=>{ alert(d.message); fetchDataFromServer(); }); } }
         
         function generateTVLink() { 
             fetch('/api/generate_tv_link').then(r => r.json()).then(d => { 
