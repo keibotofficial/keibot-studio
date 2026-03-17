@@ -383,8 +383,19 @@ def background_worker():
 
 threading.Thread(target=background_worker, daemon=True).start()
 
-def run_live_stream(task_id, stream_key, audio_path, bg_paths, start_time_str, end_time_str, cfg, metadata):
+def run_live_stream(task_id, stream_key, audio_paths, bg_paths, start_time_str, end_time_str, cfg, metadata):
     try:
+        # --- PERBAIKAN: FFmpeg Audio Concat dipindah ke Background Thread ---
+        for d in active_tasks:
+            if d['id'] == task_id: d['status'] = "Menyiapkan Playlist Audio ⚙️"
+        m_audio = f"uploads/live_{task_id}/m.mp3"; c_txt = f"uploads/live_{task_id}/c.txt"
+        with open(c_txt, 'w') as f:
+            for ap in audio_paths:
+                c_ap = os.path.abspath(ap).replace('\\', '/')
+                f.write(f"file '{c_ap}'\n")
+        subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', c_txt, '-c', 'copy', m_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # ---------------------------------------------------------------------
+
         start_obj = datetime.strptime(start_time_str.replace('T', ' '), "%Y-%m-%d %H:%M")
         while datetime.now() < start_obj:
             if stop_flags.get(task_id): raise Exception("Dibatalkan")
@@ -418,8 +429,8 @@ def run_live_stream(task_id, stream_key, audio_path, bg_paths, start_time_str, e
 
         for d in active_tasks:
             if d['id'] == task_id: d['status'] = "ON AIR (LIVE) 🔴"
-        rtmp_url = f"rtmp://a.rtmp.youtube.com/live2/{stream_key}"; vis = VisualEngine(hex_to_rgb(cfg.get('color_bot')), hex_to_rgb(cfg.get('color_top')), hex_to_rgb(cfg.get('color_part'))); bg = BackgroundManager(bg_paths, 1280, 720); audio = AudioBrain(); audio.load(audio_path)
-        cmd = [get_ffmpeg_path(), '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo', '-s', '1280x720', '-pix_fmt', 'bgr24', '-r', '30', '-i', '-', '-stream_loop', '-1', '-i', audio_path, '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '2500k', '-maxrate', '2500k', '-bufsize', '5000k', '-pix_fmt', 'yuv420p', '-g', '60', '-c:a', 'aac', '-b:a', '128k', '-f', 'flv', rtmp_url]
+        rtmp_url = f"rtmp://a.rtmp.youtube.com/live2/{stream_key}"; vis = VisualEngine(hex_to_rgb(cfg.get('color_bot')), hex_to_rgb(cfg.get('color_top')), hex_to_rgb(cfg.get('color_part'))); bg = BackgroundManager(bg_paths, 1280, 720); audio = AudioBrain(); audio.load(m_audio)
+        cmd = [get_ffmpeg_path(), '-y', '-f', 'rawvideo', '-vcodec', 'rawvideo', '-s', '1280x720', '-pix_fmt', 'bgr24', '-r', '30', '-i', '-', '-stream_loop', '-1', '-i', m_audio, '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '2500k', '-maxrate', '2500k', '-bufsize', '5000k', '-pix_fmt', 'yuv420p', '-g', '60', '-c:a', 'aac', '-b:a', '128k', '-f', 'flv', rtmp_url]
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE); live_threads[task_id] = proc
         
         f_idx = 0; end_obj = datetime.strptime(end_time_str.replace('T', ' '), "%Y-%m-%d %H:%M")
@@ -508,15 +519,10 @@ def handle_schedule_live():
     if thumb_file and thumb_file.filename: thumb_path = f"uploads/live_{t_id}/thumb{os.path.splitext(thumb_file.filename)[1]}"; thumb_file.save(thumb_path)
 
     metadata = {"channel_yt_id": yt_id, "title": request.form.get('title', ''), "description": request.form.get('description', ''), "tags": request.form.get('tags', ''), "thumbnail_path": thumb_path}
-    m_audio = f"uploads/live_{t_id}/m.mp3"; c_txt = f"uploads/live_{t_id}/c.txt"
-    with open(c_txt, 'w') as f:
-        for ap in a_ps:
-            c_ap = os.path.abspath(ap).replace('\\', '/')
-            f.write(f"file '{c_ap}'\n")
-    subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', c_txt, '-c', 'copy', m_audio])
     
+    # --- PERBAIKAN: API Langsung menjawab sukses tanpa menunggu FFMPEG ---
     active_tasks.append({"id": t_id, "type": "🔴 LIVE", "title": metadata['title'], "time": f"Mulai: {request.form.get('schedule_start').replace('T', ' ')}", "status": "In Queue ⏳"})
-    threading.Thread(target=run_live_stream, args=(t_id, stream_key, m_audio, v_ps, request.form.get('schedule_start'), request.form.get('schedule_end'), request.form, metadata)).start()
+    threading.Thread(target=run_live_stream, args=(t_id, stream_key, a_ps, v_ps, request.form.get('schedule_start'), request.form.get('schedule_end'), request.form, metadata)).start()
     return jsonify({"status": "success", "message": "Live Engine Dijadwalkan!"})
 
 if __name__ == '__main__':
