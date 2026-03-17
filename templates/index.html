@@ -3,425 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KeiBot Automation Master Studio</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>KeiBot Automation Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        ::-webkit-scrollbar { display: none; }
-        * { -ms-overflow-style: none; scrollbar-width: none; }
-
-        :root { --bg-dark: #050505; --bg-panel: #111111; --bg-input: #1a1a1a; --primary: #38bdf8; --secondary: #f472b6; --text-main: #f8fafc; --text-muted: #94a3b8; --border: #222222; }
-        .lightmode-vars { --bg-dark: #f1f5f9; --bg-panel: #ffffff; --bg-input: #f8fafc; --primary: #0284c7; --secondary: #db2777; --text-main: #0f172a; --text-muted: #475569; --border: #e2e8f0; }
-
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-dark); color: var(--text-main); margin: 0; display: flex; height: 100vh; overflow: hidden; transition: background 0.3s; }
-        
-        .sidebar { width: 280px; min-width: 280px; flex-shrink: 0; background-color: var(--bg-panel); border-right: 1px solid var(--border); padding: 25px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; }
-        .logo-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
-        .logo-container img { height: 80px; width: 80px; margin-bottom: 10px; border-radius: 15px; object-fit: cover; border: 2px solid var(--primary); }
-        .logo-text { color: var(--text-main); font-size: 20px; font-weight: 800; margin: 0; letter-spacing: 1px; }
-        .logo-subtext { color: var(--secondary); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; }
-
-        .nav-group { flex-grow: 1; }
-        .sidebar-category { color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: 1.5px; margin-top: 25px; margin-bottom: 10px; padding-left: 5px; text-transform: uppercase; }
-        .nav-item { display: flex; align-items: center; width: 100%; height: 48px; padding: 0 15px; margin-bottom: 8px; background-color: transparent; color: var(--text-muted); border: 1px solid transparent; cursor: pointer; text-align: left; font-size: 14px; font-weight: 600; border-radius: 8px; transition: 0.2s; box-sizing: border-box; }
-        .nav-item span.icon { margin-right: 12px; font-size: 16px; }
-        .nav-item:hover { background-color: var(--bg-input); color: var(--text-main); }
-        .nav-item.active { background-color: var(--primary); color: #ffffff; border-color: var(--primary); }
-
-        .mode-toggle-container { display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-input); padding: 12px 15px; border-radius: 8px; margin-top: auto; margin-bottom: 10px; border: 1px solid var(--border); }
-        .mode-toggle-container label { font-size: 12px; font-weight: bold; color: var(--text-muted); }
-        .mode-switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-        .mode-switch input { opacity: 0; width: 0; height: 0; }
-        .mode-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: 0.4s; border-radius: 20px; }
-        .mode-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: 0.4s; border-radius: 50%; }
-        input:checked + .mode-slider { background-color: var(--primary); }
-        input:checked + .mode-slider:before { transform: translateX(20px); }
-
-        .main-content { flex-grow: 1; min-width: 0; padding: 40px; overflow-y: auto; background-color: var(--bg-dark); transition: background 0.3s; }
-        .panel { display: none; background-color: var(--bg-panel); border: 1px solid var(--border); padding: 35px; border-radius: 12px; animation: fadeIn 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: background 0.3s, border-color 0.3s; }
-        .panel.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .vis-box { background-color: var(--bg-input); border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 3px solid var(--primary); }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 10px; }
-        @media (max-width: 1024px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
-        
-        .slider-group { background: var(--bg-dark); padding: 10px; border-radius: 4px; border: 1px solid var(--border); }
-        .slider-group label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold; }
-        .val-badge { color: var(--primary); font-family: monospace; }
-        input[type="range"], input[type="color"], input[type="number"] { width: 100%; cursor: pointer; }
-        input[type="text"], input[type="file"], input[type="datetime-local"], input[type="password"], select, textarea { width: 100%; padding: 12px; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); margin-top: 5px; box-sizing: border-box; border-radius: 6px; font-family: inherit; }
-        input:read-only { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
-
-        .btn-gold { background-color: var(--primary); color: #ffffff; border: none; padding: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.2s; }
-        .btn-gold:hover { background-color: var(--secondary); transform: translateY(-2px); }
-        .btn-small { background: var(--border); color: var(--text-main); border: 1px solid var(--text-muted); padding: 6px 12px; font-size: 11px; cursor: pointer; border-radius: 4px; margin-left: 5px; transition: 0.2s; }
-        .btn-small:hover { background: var(--text-muted); color: #fff; }
-        .btn-stop { background: #b90000; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px; transition: 0.2s; }
-        .btn-stop:hover { background: #ff3333; }
-
-        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; font-size: 13px; }
-        th { padding: 15px; border-bottom: 2px solid var(--border); text-align: left; color: var(--text-muted); background: var(--bg-input); text-transform: uppercase; font-size: 11px; font-weight: bold; }
-        td { padding: 15px; border-bottom: 1px solid var(--border); color: var(--text-main); }
-
-        .dash-card { background: var(--bg-panel); padding: 25px; border-radius: 8px; border-top: 3px solid var(--primary); text-align: center; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .dash-card h2 { margin: 0; font-size: 32px; color: var(--text-main); font-weight: 800; }
-        .dash-card p { margin: 8px 0 0; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
-        .progress-container { width: 100%; background-color: var(--border); border-radius: 5px; margin-top: 10px; overflow: hidden; height: 8px; }
-        .progress-bar { height: 100%; background-color: var(--secondary); width: 0%; transition: width 1s ease-in-out; }
-        .stat-box { background: var(--bg-panel); border: 1px solid var(--border); padding: 25px; border-radius: 12px; margin-top: 20px; }
-        
-        .settings-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
-        .channel-row { display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--border); padding: 15px 20px; border-radius: 8px; transition: background 0.3s; }
-        .channel-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; width: 100%; }
-        .channel-header:hover { background: var(--bg-input); }
-        .channel-info { display: flex; align-items: center; gap: 15px; }
-        .channel-info img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--primary); }
-        .key-item { display: flex; justify-content: space-between; background: var(--bg-input); padding: 10px 15px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border); align-items: center; transition: border-color 0.2s; }
-        .key-item:hover { border-color: var(--text-muted); }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+        body { background-color: #111116; color: #e2e8f0; font-family: 'Poppins', sans-serif; overflow-x: hidden; }
+        .sidebar { background-color: #0d0d12; border-right: 1px solid #1f1f2e; }
+        .nav-item { color: #84849a; transition: all 0.3s; border-radius: 8px; cursor: pointer; }
+        .nav-item:hover { color: #fff; background-color: #1f1f2e; }
+        .nav-item.active { background-color: #22d3ee; color: #000; font-weight: 600; }
+        .card { background-color: #1a1a24; border: 1px solid #2a2a35; border-radius: 12px; }
+        .text-cyan { color: #22d3ee; }
+        .text-pink { color: #f43f5e; }
+        .bg-cyan { background-color: #22d3ee; color: #000; }
+        .bg-cyan:hover { background-color: #06b6d4; }
+        .input-dark { background-color: #111116; border: 1px solid #2a2a35; color: white; border-radius: 6px; padding: 10px; width: 100%; outline: none; }
+        .input-dark:focus { border-color: #22d3ee; }
+        table { width: 100%; text-align: left; border-collapse: collapse; }
+        th { border-bottom: 1px solid #2a2a35; padding: 12px; font-size: 12px; color: #84849a; text-transform: uppercase; }
+        td { padding: 15px 12px; border-bottom: 1px solid #1f1f2e; font-size: 14px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
-<body onload="initApp()" class="darkmode">
+<body class="flex h-screen">
 
-    <div class="sidebar">
-        <div class="logo-container">
-            <img src="/static/logo.png" alt="KeiBot Logo" onerror="this.src='https://via.placeholder.com/80/1a1a1a/38bdf8?text=KB'">
-            <h1 class="logo-text">KeiBot</h1>
-            <span class="logo-subtext">Automation</span>
+    <div class="sidebar w-64 h-full flex flex-col p-5 space-y-6 fixed">
+        <div class="text-center mt-4">
+            <h1 class="text-3xl font-extrabold text-white tracking-wider">KeiBot</h1>
+            <p class="text-pink text-[10px] font-bold tracking-[0.3em] mt-1">AUTOMATION</p>
         </div>
 
-        <div class="nav-group">
-            <div class="sidebar-category">Overview</div>
-            <button class="nav-item active" onclick="switchTab('dashboard')" id="btn-dashboard"><span class="icon">📈</span> Dashboard</button>
-            <button class="nav-item" onclick="switchTab('tasks')" id="btn-tasks"><span class="icon">⚙️</span> Task Monitor</button>
-            
-            <div class="sidebar-category">Studio Engine</div>
-            <button class="nav-item" onclick="switchTab('upload')" id="btn-upload"><span class="icon">📺</span> VOD Studio</button>
-            <button class="nav-item" onclick="switchTab('live')" id="btn-live"><span class="icon">🔴</span> Live Station</button>
-            
-            <div class="sidebar-category">System</div>
-            <button class="nav-item" onclick="switchTab('settings')" id="btn-settings"><span class="icon">🔧</span> Settings</button>
+        <div class="space-y-1 mt-8">
+            <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 pl-3 tracking-wider">Overview</p>
+            <div class="nav-item p-3 flex items-center space-x-3 active" onclick="switchTab('dashboard', this)">
+                <i class="fas fa-chart-line w-5 text-center"></i><span class="text-sm">Dashboard</span>
+            </div>
+            <div class="nav-item p-3 flex items-center space-x-3" onclick="switchTab('task_monitor', this)">
+                <i class="fas fa-cog w-5 text-center"></i><span class="text-sm">Task Monitor</span>
+            </div>
         </div>
 
-        <div class="mode-toggle-container">
-            <label>Dark Mode</label>
-            <label class="mode-switch"><input type="checkbox" id="modeSwitch" checked onchange="toggleMode()"><span class="mode-slider"></span></label>
+        <div class="space-y-1">
+            <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 pl-3 tracking-wider">Studio Engine</p>
+            <div class="nav-item p-3 flex items-center space-x-3" onclick="switchTab('vod_studio', this)">
+                <i class="fas fa-tv w-5 text-center"></i><span class="text-sm">VOD Studio</span>
+            </div>
+            <div class="nav-item p-3 flex items-center space-x-3" onclick="switchTab('live_station', this)">
+                <i class="fas fa-circle text-pink w-5 text-center text-[10px]"></i><span class="text-sm">Live Station</span>
+            </div>
+        </div>
+
+        <div class="space-y-1">
+            <p class="text-[10px] font-bold text-gray-500 uppercase mb-2 pl-3 tracking-wider">System</p>
+            <div class="nav-item p-3 flex items-center space-x-3" onclick="switchTab('settings', this)">
+                <i class="fas fa-wrench w-5 text-center"></i><span class="text-sm">Settings</span>
+            </div>
         </div>
     </div>
 
-    <div class="main-content">
-        <div id="dashboard" class="panel active">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="margin:0;">📈 YouTube Studio Analytics</h2>
-                <select id="analytics_filter" style="width:250px; background:var(--bg-panel); color:var(--primary); border:1px solid var(--border); padding:10px; border-radius:6px; font-weight:bold;" onchange="renderAnalytics()">
-                    <option value="ALL">🌟 ALL CHANNELS OVERVIEW</option>
-                </select>
-            </div>
-            <div class="grid-3" style="margin-top:25px;">
-                <div class="dash-card"><h2 id="st_views">0</h2><p>Total Views</p></div>
-                <div class="dash-card" style="border-color:var(--secondary);"><h2 id="st_watch">0</h2><p>Watch Time (Hours)</p></div>
-                <div class="dash-card" style="border-color:var(--primary);"><h2 id="st_subs">0</h2><p>Subscribers</p></div>
-            </div>
-            <div id="monetize_box" class="stat-box" style="display:none;">
-                <h3 style="margin-top:0; color:var(--primary); font-size:16px;">💰 Kelayakan Monetisasi</h3>
-                <div class="grid-3" style="align-items: center;">
-                    <div><span id="mon_status" style="background:#444; padding:8px 15px; border-radius:6px; font-size:12px; font-weight:bold; color:white;">Menghitung...</span></div>
-                    <div><label style="font-size:11px; color:var(--text-muted); font-weight:bold;">Subscribers (Syarat: 1.000)</label><div class="progress-container"><div class="progress-bar" id="prog_subs"></div></div></div>
-                    <div><label style="font-size:11px; color:var(--text-muted); font-weight:bold;">Watch Hours (Syarat: 4.000)</label><div class="progress-container"><div class="progress-bar" id="prog_watch" style="background:var(--primary);"></div></div></div>
-                </div>
-            </div>
-            <div class="stat-box"><canvas id="myChart" style="max-height: 350px; width:100%;"></canvas></div>
-        </div>
+    <div class="ml-64 w-full h-full overflow-y-auto p-10">
 
-        <div id="tasks" class="panel">
-            <div class="grid-3" style="margin-bottom: 30px;">
-                <div class="dash-card" style="padding:15px; border-top:2px solid var(--primary);"><h2 id="tm_channels" style="font-size:24px;">0</h2><p style="font-size:10px;">Connected Channels</p></div>
-                <div class="dash-card" style="padding:15px; border-top:2px solid var(--secondary);"><h2 id="tm_active" style="font-size:24px;">0</h2><p style="font-size:10px;">Active Tasks</p></div>
-                <div class="dash-card" style="padding:15px; border-top:2px solid var(--text-muted);"><h2 id="tm_history" style="font-size:24px;">0</h2><p style="font-size:10px;">Completed Tasks</p></div>
-            </div>
-            <h2 style="color:var(--secondary); font-size:18px; margin-bottom:5px;">🔴 Active Tasks: LIVE STREAMING</h2>
-            <div style="overflow-x: auto;">
-                <table style="margin-bottom:40px; min-width: 800px;">
-                    <thead><tr><th width="5%">ID</th><th width="35%">JUDUL</th><th width="20%">JADWAL / WAKTU MATI</th><th width="20%">STATUS</th><th width="10%">AKSI</th></tr></thead>
-                    <tbody id="tabelAktifLive"></tbody>
-                </table>
-            </div>
-            <h2 style="color:var(--primary); font-size:18px; margin-bottom:5px;">📺 Active Tasks: VOD RENDER & UPLOAD</h2>
-            <div style="overflow-x: auto;">
-                <table style="margin-bottom:50px; min-width: 800px;">
-                    <thead><tr><th width="5%">ID</th><th width="35%">JUDUL</th><th width="20%">JADWAL TAYANG</th><th width="20%">STATUS</th><th width="10%">AKSI</th></tr></thead>
-                    <tbody id="tabelAktifVOD"></tbody>
-                </table>
-            </div>
-            <h2 style="color:var(--text-muted); font-size:16px; border-top:1px solid var(--border); padding-top:20px;">🗂️ History (Selesai / Gagal)</h2>
-            <div style="overflow-x: auto;">
-                <table style="opacity: 0.8; min-width: 800px;">
-                    <thead><tr><th>ID</th><th>TIPE</th><th>JUDUL</th><th>STATUS AKHIR</th></tr></thead>
-                    <tbody id="tabelHistory"></tbody>
-                </table>
+        <div id="dashboard" class="tab-content active">
+            <h2 class="text-2xl font-bold mb-6 text-cyan"><i class="fas fa-chart-line mr-2"></i> Dashboard Analytics</h2>
+            <div class="grid grid-cols-3 gap-6 mb-8">
+                <div class="card p-6 text-center"><h3 class="text-gray-400 text-sm font-bold uppercase">Total Channels</h3><p class="text-5xl font-bold mt-3" id="stat-channels">0</p></div>
+                <div class="card p-6 text-center"><h3 class="text-gray-400 text-sm font-bold uppercase">Active Tasks</h3><p class="text-5xl font-bold mt-3 text-cyan" id="stat-active">0</p></div>
+                <div class="card p-6 text-center"><h3 class="text-gray-400 text-sm font-bold uppercase">History Tasks</h3><p class="text-5xl font-bold mt-3" id="stat-history">0</p></div>
             </div>
         </div>
 
-        <div id="settings" class="panel">
-            
-            <div class="stat-box" style="margin-top:0; margin-bottom: 30px; border-left: 4px solid var(--primary);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3 style="margin:0; color:var(--text-main);">⚙️ Konfigurasi Google API (OAuth 2.0)</h3>
-                    <span id="api_status_badge" style="background:#444; padding:5px 10px; border-radius:4px; font-size:12px; font-weight:bold;">Mengecek...</span>
-                </div>
-                <p style="font-size:12px; color:var(--text-muted); margin-top:0;">Agar KeiBot bisa terhubung dengan channel Anda, Anda wajib mengunggah file <b>client_secret.json</b> dari Google Cloud Console milik Anda sendiri.</p>
-                
-                <form id="apiUploadForm" onsubmit="uploadSecret(event)" style="display:flex; gap:10px; align-items:center; margin-top:15px;">
-                    <input type="file" name="secret_file" accept=".json" required style="width:70%; margin:0; padding:10px;">
-                    <button type="submit" class="btn-gold" style="width:30%; margin:0; padding:12px;">UPLOAD API KEY</button>
-                </form>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:15px; margin-bottom:20px;">
-                <h2 style="margin:0;">📺 TV System & Channels</h2>
-                <button class="btn-gold" style="width:auto; margin:0; padding:10px 20px;" onclick="generateTVLink()">➕ ADD NEW CHANNEL</button>
-            </div>
-            
-            <div id="tvContainer" style="display:none; margin-bottom:25px; background:var(--bg-input); padding:15px; border-radius:8px; border-left:3px solid var(--primary);">
-                <p style="margin-top:0; font-size:13px; color:var(--text-muted);" id="tvMsg">Copy link di bawah dan paste di browser channel YouTube Anda.</p>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="tvUrl" readonly style="margin:0; font-family:monospace; color:var(--primary); flex-grow:1;">
-                    <button class="btn-small" onclick="copyTVUrl()" style="margin:0; padding:0 20px;">📋 COPY</button>
+        <div id="task_monitor" class="tab-content">
+            <div class="card p-6 mb-8">
+                <h2 class="text-lg font-bold mb-4 text-cyan tracking-wide"><i class="fas fa-tv mr-2"></i> Active Tasks: VOD RENDER & UPLOAD</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead><tr><th>ID</th><th>Judul</th><th>Jadwal Tayang</th><th>Status</th><th>Aksi</th></tr></thead>
+                        <tbody id="table-active"><tr><td colspan="5" class="text-center text-gray-500 py-6 text-sm">Tidak ada VOD di antrean.</td></tr></tbody>
+                    </table>
                 </div>
             </div>
-
-            <div class="settings-grid" id="settingsGrid">
+            <div class="card p-6">
+                <h2 class="text-lg font-bold mb-4 text-yellow-400 tracking-wide"><i class="fas fa-folder mr-2"></i> History (Selesai / Gagal)</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead><tr><th>ID</th><th>Tipe</th><th>Judul</th><th>Status Akhir</th></tr></thead>
+                        <tbody id="table-history"><tr><td colspan="4" class="text-center text-gray-500 py-6 text-sm">Belum ada history.</td></tr></tbody>
+                    </table>
                 </div>
-
-            <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid var(--border); text-align: center;">
-                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px; font-weight:bold;">Butuh Bantuan atau Ingin Mendukung Pengembangan KeiBot?</p>
-                <a href="https://sociabuzz.com/keibot/support" target="_blank" style="display: inline-block; background-color: var(--secondary); color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; transition: transform 0.2s, background 0.2s;">
-                    💖 Dukung KeiBot via SociaBuzz
-                </a>
             </div>
         </div>
 
-        <div id="upload" class="panel">
-            <h2 style="color:var(--primary);">📺 VOD Render Studio</h2>
-            <form id="formUpload" onsubmit="submitForm(event, '/api/upload_vod')">
-                <label style="font-weight:bold; color:var(--text-muted);">Target Channel</label>
-                <select name="channel_select" id="vod_channel_select" required onchange="fetchPlaylists(this.value, 'vod_playlist_select')"></select>
-                <div class="grid-3" style="margin-top: 15px;">
-                    <div><label style="font-weight:bold; color:var(--text-muted);">Audio Playlist (Multi)</label><input type="file" name="audios" id="vod_audio_input" multiple accept=".mp3,.wav" required onchange="calcAudioDuration(this, 'vod_dur_info')"><small id="vod_dur_info" style="color:var(--primary); display:block; font-family:monospace; margin-top:5px;">Durasi Asli: 00:00:00</small></div>
-                    <div><label style="font-weight:bold; color:var(--text-muted);">Background (Multi)</label><input type="file" name="background" multiple accept=".mp4,.jpg,.png" required></div>
-                    <div><label style="font-weight:bold; color:var(--text-muted);">Jumlah Looping Playlist</label><input type="number" name="loop_count" id="vod_loop_count" min="1" value="1" required oninput="updateTotalDuration('vod')"><small id="vod_total_info" style="color:var(--secondary); display:block; font-family:monospace; font-weight:bold; margin-top:5px;">Estimasi VOD: 00:00:00</small></div>
+        <div id="vod_studio" class="tab-content">
+            <h2 class="text-2xl font-bold mb-6 text-cyan"><i class="fas fa-tv mr-2"></i> VOD Studio Generator</h2>
+            <form id="form-vod" action="/api/upload_vod" method="POST" enctype="multipart/form-data" class="card p-8 space-y-6">
+                <div class="grid grid-cols-2 gap-8">
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Target Channel</label><select name="channel_select" id="vod-channel" class="input-dark"></select></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Judul Video</label><input type="text" name="title" class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">File Audio (.mp3)</label><input type="file" name="audios" multiple class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Background Visual (.jpg/.mp4)</label><input type="file" name="background" multiple class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Thumbnail (.jpg)</label><input type="file" name="thumbnail" class="input-dark"></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Tags (Pisahkan koma)</label><input type="text" name="tags" class="input-dark"></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Jadwal Tayang (Kosongi jika instan)</label><input type="datetime-local" name="schedule" class="input-dark"></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Looping Background (Berapa x)</label><input type="number" name="loop_count" value="1" min="1" class="input-dark"></div>
+                    <div class="col-span-2"><label class="block text-gray-400 mb-2 text-sm font-semibold">Deskripsi Video</label><textarea name="description" class="input-dark" rows="3"></textarea></div>
                 </div>
-                <div style="border-top: 1px solid var(--border); margin-top: 25px; padding-top: 20px;">
-                    <span style="color:var(--primary); font-weight:bold; font-size:12px; letter-spacing:1px;">📝 YOUTUBE METADATA</span>
-                    <div class="grid-3" style="margin-top: 15px;"><div style="grid-column: span 2;"><label style="font-weight:bold; color:var(--text-muted);">Judul Video</label><input type="text" name="title" required></div><div><label style="font-weight:bold; color:var(--text-muted);">Thumbnail Custom</label><input type="file" name="thumbnail" accept=".jpg,.png,.jpeg"></div></div>
-                    <div class="grid-3" style="margin-top: 15px;"><div style="grid-column: span 2;"><label style="font-weight:bold; color:var(--text-muted);">Deskripsi Video</label><textarea name="description" rows="4"></textarea></div><div><label style="font-weight:bold; color:var(--text-muted);">Tags (Pisahkan koma)</label><input type="text" name="tags"><label style="margin-top:10px; font-weight:bold; color:var(--text-muted);">Pilih Playlist YouTube</label><select name="playlist" id="vod_playlist_select"><option value="">-- Pilih Channel Terlebih Dahulu --</option></select></div></div>
-                    <div><label style="margin-top:15px; font-weight:bold; color:var(--text-muted);">Jadwal Tayang (Schedule Time)</label><input type="datetime-local" name="schedule" required></div>
-                </div>
-                <div class="vis-box" id="visVod" style="margin-top:25px;"></div>
-                <button type="submit" class="btn-gold">🚀 START RENDERING & UPLOAD</button>
+                <button type="submit" class="bg-cyan text-black w-full py-4 rounded-lg mt-6 font-extrabold tracking-widest hover:opacity-90 transition shadow-[0_0_15px_rgba(34,211,238,0.4)]">START RENDER & UPLOAD 🚀</button>
             </form>
         </div>
 
-        <div id="live" class="panel">
-            <h2 style="color:var(--secondary);">🔴 24/7 Live Streaming Station</h2>
-            <form id="formLive" onsubmit="submitForm(event, '/api/schedule_live')">
-                <label style="font-weight:bold; color:var(--text-muted);">Target Channel</label>
-                <select name="channel_select" id="live_channel_select" required onchange="handleLiveChannelSelect(this)"></select>
-                <div class="grid-3" style="margin-top: 15px;">
-                    <div><label style="font-weight:bold; color:var(--text-muted);">Audio Playlist</label><input type="file" name="audios" multiple accept=".mp3,.wav" required></div>
-                    <div><label style="font-weight:bold; color:var(--text-muted);">Background (Looping)</label><input type="file" name="background" multiple accept=".mp4,.gif,.jpg" required></div>
-                    <div>
-                        <label style="font-weight:bold; color:var(--text-muted);">Pilih Stream Key <small style="color:var(--secondary);">(Satu tugas = 1 Key)</small></label>
-                        <select name="stream_key" id="live_stream_key" required>
-                            <option value="">-- Pilih Channel Terlebih Dahulu --</option>
-                        </select>
-                    </div>
+        <div id="live_station" class="tab-content">
+            <h2 class="text-2xl font-bold mb-6 text-pink"><i class="fas fa-circle mr-2"></i> Live Station 24/7</h2>
+            <form id="form-live" action="/api/schedule_live" method="POST" enctype="multipart/form-data" class="card p-8 space-y-6">
+                <div class="grid grid-cols-2 gap-8">
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Target Channel</label><select name="channel_select" id="live-channel" class="input-dark" onchange="updateStreamKeys()"></select></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Stream Key</label><select name="stream_key" id="live-key" class="input-dark"></select></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Judul Live Stream</label><input type="text" name="title" class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Jadwal Mulai</label><input type="datetime-local" name="schedule_start" class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Jadwal Berhenti</label><input type="datetime-local" name="schedule_end" class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">File Audio Playlist (.mp3)</label><input type="file" name="audios" multiple class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Background Visual (.jpg/.mp4)</label><input type="file" name="background" multiple class="input-dark" required></div>
+                    <div><label class="block text-gray-400 mb-2 text-sm font-semibold">Thumbnail Live (.jpg)</label><input type="file" name="thumbnail" class="input-dark"></div>
+                    <div class="col-span-2"><label class="block text-gray-400 mb-2 text-sm font-semibold">Deskripsi Live Stream</label><textarea name="description" class="input-dark" rows="3"></textarea></div>
                 </div>
-                <div style="border-top: 1px solid var(--border); margin-top: 25px; padding-top: 20px;">
-                    <span style="color:var(--secondary); font-weight:bold; font-size:12px; letter-spacing:1px;">📝 YOUTUBE METADATA (LIVE API)</span>
-                    <div class="grid-3" style="margin-top: 15px;"><div style="grid-column: span 2;"><label style="font-weight:bold; color:var(--text-muted);">Judul Live (Berubah Otomatis saat Tayang)</label><input type="text" name="title" required></div><div><label style="font-weight:bold; color:var(--text-muted);">Thumbnail Live</label><input type="file" name="thumbnail" accept=".jpg,.png,.jpeg"></div></div>
-                    <div class="grid-3" style="margin-top: 15px;"><div style="grid-column: span 2;"><label style="font-weight:bold; color:var(--text-muted);">Deskripsi Live</label><textarea name="description" rows="4"></textarea></div><div><label style="font-weight:bold; color:var(--text-muted);">Tags</label><input type="text" name="tags"></div></div>
-                    <div class="grid-3" style="margin-top:15px;">
-                        <div><label style="font-weight:bold; color:var(--text-muted);">Waktu Mulai (Start Live)</label><input type="datetime-local" name="schedule_start" required></div>
-                        <div><label style="font-weight:bold; color:var(--text-muted);">Waktu Mati (Auto-Clean Storage)</label><input type="datetime-local" name="schedule_end" required></div>
-                    </div>
-                </div>
-                <div class="vis-box" id="visLive" style="margin-top:25px;"></div>
-                <button type="submit" class="btn-gold" style="background:var(--secondary); color:white;">📡 START LIVE STREAMING</button>
+                <button type="submit" class="w-full py-4 rounded-lg mt-6 font-extrabold tracking-widest hover:opacity-90 transition text-white shadow-[0_0_15px_rgba(244,63,94,0.4)]" style="background-color: #f43f5e;">START LIVE STREAMING 🔴</button>
             </form>
         </div>
+
+        <div id="settings" class="tab-content">
+            <div class="card p-8 mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white"><i class="fas fa-cog mr-2 text-gray-400"></i> Konfigurasi Google API (OAuth 2.0)</h2>
+                    <span id="api-status" class="bg-gray-700 text-white px-3 py-1 rounded text-[10px] font-bold tracking-wider">API STATUS</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-6">Agar KeiBot bisa terhubung dengan channel Anda, Anda wajib mengunggah file <b class="text-white">client_secret.json</b> dari Google Cloud Console milik Anda sendiri.</p>
+                <div class="flex space-x-4">
+                    <input type="file" id="secret_file" class="input-dark flex-1">
+                    <button onclick="uploadSecret()" class="bg-[#2ebcff] text-black px-6 rounded-md font-bold text-sm tracking-wide">UPLOAD API KEY</button>
+                </div>
+            </div>
+
+            <div class="card p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-bold text-white"><i class="fas fa-tv mr-2 text-gray-400"></i> TV System & Channels</h2>
+                    <button onclick="generateLink()" class="bg-[#2ebcff] text-black px-4 py-2 rounded-md font-bold text-sm tracking-wide"><i class="fas fa-plus mr-1"></i> ADD NEW CHANNEL</button>
+                </div>
+                <div class="bg-[#111116] p-5 rounded-lg border border-[#2a2a35]">
+                    <p class="text-gray-400 text-sm mb-3">Copy link di bawah dan paste di browser channel YouTube Anda.</p>
+                    <div class="flex">
+                        <input type="text" id="tv-link" class="input-dark rounded-r-none border-r-0 text-cyan font-mono" readonly placeholder="/device_login">
+                        <button onclick="copyLink()" class="bg-[#1e1e24] px-6 rounded-r-lg border border-[#2a2a35] hover:bg-gray-700 transition"><i class="fas fa-clipboard text-pink mb-1 block text-lg"></i> <span class="text-[10px] uppercase">Copy</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="sys-monitor" style="position: fixed; bottom: 20px; right: 20px; background: rgba(20,20,30,0.85); border: 1px solid #333; padding: 15px; border-radius: 10px; color: white; font-family: 'Poppins', sans-serif; font-size: 13px; z-index: 9999; box-shadow: 0 5px 20px rgba(0,0,0,0.7); backdrop-filter: blur(8px); width: 220px;">
+        <div style="margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 5px;"><b style="color:#22d3ee; font-size: 12px; letter-spacing: 1px;"><i class="fas fa-server"></i> SERVER LOAD</b></div>
+        <div style="display: flex; justify-content: space-between; gap: 15px;"><span>CPU:</span> <span id="sys-cpu" style="font-weight:bold; color:#f43f5e;">0%</span></div>
+        <div style="display: flex; justify-content: space-between; gap: 15px; margin-top: 5px;"><span>RAM:</span> <span id="sys-ram-pct" style="font-weight:bold; color:#00cc66;">0%</span></div>
+        <div id="sys-ram-text" style="color: #888; font-size: 11px; margin-top: 3px; text-align: right;">0GB / 0GB</div>
     </div>
 
     <script>
-        let cachedChannels = []; let analyticsData = []; let myChartInstance = null;
-
-        // CEK STATUS API GOOGLE
-        function checkApiStatus() {
-            fetch('/api/check_secret').then(r=>r.json()).then(d=>{
-                const badge = document.getElementById('api_status_badge');
-                if(d.exists) { badge.innerText = "🟢 API AKTIF"; badge.style.background = "#00ffaa"; badge.style.color = "black"; } 
-                else { badge.innerText = "🔴 BELUM UPLOAD API"; badge.style.background = "#b90000"; badge.style.color = "white"; }
-            });
+        // 1. Fungsi Pindah Tab Navigasi
+        function switchTab(tabId, element = null) {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.getElementById(tabId).style.display = 'block';
+            if(element) {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                element.classList.add('active');
+            } else {
+                document.querySelectorAll('.nav-item').forEach(i => {
+                    i.classList.remove('active');
+                    if(i.getAttribute('onclick').includes(tabId)) i.classList.add('active');
+                });
+            }
         }
 
-        // FUNGSI UPLOAD API
-        function uploadSecret(e) {
-            e.preventDefault();
-            fetch('/api/upload_secret', { method: 'POST', body: new FormData(e.target) })
-            .then(r => r.json()).then(d => {
-                alert(d.message); checkApiStatus(); e.target.reset();
-            });
-        }
+        // 2. FUNGSI FIRE & FORGET SUPER CEPAT! (0 DETIK DELAY)
+        document.querySelectorAll("form").forEach(form => {
+            if(form.action.includes("/api/upload_vod") || form.action.includes("/api/schedule_live")) {
+                form.addEventListener("submit", function(e) {
+                    e.preventDefault(); // Matikan loading bawaan web
+                    
+                    // Bungkus data dan lempar ke mesin belakang
+                    let formData = new FormData(form);
+                    let xhr = new XMLHttpRequest();
+                    xhr.open("POST", form.action, true);
+                    xhr.send(formData); // Melesat tanpa menunggu!
+                    
+                    // INSTAN: Bersihkan form & Lempar user ke Task Monitor seketika!
+                    form.reset(); 
+                    switchTab('task_monitor'); 
+                });
+            }
+        });
 
-        function toggleMode() { const body = document.body; const isDark = document.getElementById('modeSwitch').checked; if(isDark) { body.classList.remove('lightmode-vars'); body.classList.add('darkmode'); } else { body.classList.remove('darkmode'); body.classList.add('lightmode-vars'); } Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-muted'); Chart.defaults.borderColor = getComputedStyle(document.body).getPropertyValue('--border'); if(analyticsData.length > 0) renderAnalytics(); }
-        function fetchAnalyticsData() { fetch('/api/get_youtube_analytics').then(r=>r.json()).then(data => { analyticsData = data; const filter = document.getElementById('analytics_filter'); filter.innerHTML = '<option value="ALL">🌟 ALL CHANNELS OVERVIEW</option>'; data.forEach(d => { filter.innerHTML += `<option value="${d.yt_id}">${d.name}</option>`; }); renderAnalytics(); }); }
+        // 3. Polling Data Real-Time (Tanpa Reload Web)
+        let channelDataCache = [];
         
-        function renderAnalytics() {
-            const filterVal = document.getElementById('analytics_filter').value; const monBox = document.getElementById('monetize_box'); let totalViews=0, totalSubs=0, totalWatch=0; let chartLabels = [], chartViews = [], chartSubs = [];
-            const primaryColor = getComputedStyle(document.body).getPropertyValue('--primary').trim(); const secondaryColor = getComputedStyle(document.body).getPropertyValue('--secondary').trim();
-            if(filterVal === 'ALL') { monBox.style.display = 'none'; analyticsData.forEach(d => { totalViews += d.views; totalSubs += d.subs; totalWatch += d.watch_hours; chartLabels.push(d.name); chartViews.push(d.views); chartSubs.push(d.subs); }); renderChart("Perbandingan Views & Subs", chartLabels, chartViews, chartSubs, 'bar', primaryColor, secondaryColor); } else { monBox.style.display = 'block'; const d = analyticsData.find(x => x.yt_id === filterVal); if(d) { totalViews = d.views; totalSubs = d.subs; totalWatch = d.watch_hours; let pctSubs = Math.min((totalSubs / 1000) * 100, 100); let pctWatch = Math.min((totalWatch / 4000) * 100, 100); document.getElementById('prog_subs').style.width = pctSubs + '%'; document.getElementById('prog_watch').style.width = pctWatch + '%'; let statusBox = document.getElementById('mon_status'); if(totalSubs >= 1000 && totalWatch >= 4000) { statusBox.innerText = "🎉 MEMENUHI SYARAT MONETISASI"; statusBox.style.background = "#00ffaa"; statusBox.style.color = "black"; } else { statusBox.innerText = "❌ BELUM MEMENUHI SYARAT"; statusBox.style.background = "#b90000"; statusBox.style.color = "white"; } renderChart(`Statistik: ${d.name}`, ['Subscribers', 'Videos Uploaded'], [d.subs, d.videos], [], 'doughnut', secondaryColor, primaryColor); } }
-            document.getElementById('st_views').innerText = totalViews.toLocaleString(); document.getElementById('st_watch').innerText = totalWatch.toLocaleString(); document.getElementById('st_subs').innerText = totalSubs.toLocaleString();
-        }
-
-        function renderChart(title, labels, data1, data2, type, c1, c2) { const ctx = document.getElementById('myChart').getContext('2d'); if(myChartInstance) myChartInstance.destroy(); let datasets = []; if(type === 'bar') datasets = [{ label: 'Total Views', data: data1, backgroundColor: c1 }, { label: 'Subscribers', data: data2, backgroundColor: c2 }]; else datasets = [{ data: data1, backgroundColor: [c1, c2], borderWidth:0 }]; Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-muted'); Chart.defaults.borderColor = getComputedStyle(document.body).getPropertyValue('--border'); myChartInstance = new Chart(ctx, { type: type, data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title, color: getComputedStyle(document.body).getPropertyValue('--text-main') } }, scales: type === 'bar' ? { y: { beginAtZero: true } } : {} } }); }
-
-        function toggleChannelSettings(yt_id) { const bodyDiv = document.getElementById('body_toggle_' + yt_id); const iconSpan = document.getElementById('icon_toggle_' + yt_id); if(bodyDiv.style.display === 'none') { bodyDiv.style.display = 'block'; iconSpan.innerText = '🔼'; } else { bodyDiv.style.display = 'none'; iconSpan.innerText = '🔽'; } }
-        function renderSettingsGrid() {
-            const sGrid = document.getElementById('settingsGrid'); sGrid.innerHTML = '';
-            cachedChannels.forEach(ch => { let keysHTML = ''; if(ch.stream_keys && ch.stream_keys.length > 0) { ch.stream_keys.forEach((sk, idx) => { let safeKey = sk.key.substring(0, 4) + "••••••••"; keysHTML += `<div class="key-item"><div><span style="color:var(--primary); font-weight:bold; margin-right:15px;">🏷️ ${sk.name}</span><span style="color:var(--text-muted); font-family:monospace;">${safeKey}</span></div><button onclick="removeStreamKey('${ch.yt_id}', ${idx})" style="background:none; border:none; color:#ff3333; cursor:pointer; font-size:12px; font-weight:bold;">❌ Hapus</button></div>`; }); } else { keysHTML = '<p style="font-size:12px; color:var(--text-muted); margin:0 0 15px 0;">⚠️ Belum ada Stream Key tersimpan.</p>'; }
-                sGrid.innerHTML += `<div class="channel-row"><div class="channel-header" onclick="toggleChannelSettings('${ch.yt_id}')"><div class="channel-info"><img src="${ch.thumbnail}"><div><h4 style="margin:0; font-size:16px;">${ch.name}</h4><span style="font-size:11px; color:var(--primary);">${ch.status}</span></div></div><div><span id="icon_toggle_${ch.yt_id}" style="font-size:20px; opacity:0.7;">🔽</span></div></div><div id="body_toggle_${ch.yt_id}" style="display:none; width:100%; border-top:1px solid var(--border); padding-top:20px; margin-top:15px;"><h4 style="margin:0 0 10px 0; font-size:12px; color:var(--text-muted); text-transform:uppercase;">🔑 Kelola Stream Key</h4><div id="keyList_${ch.yt_id}">${keysHTML}</div><div style="display:flex; gap:10px; align-items:center; background:var(--bg-input); padding:15px; border-radius:6px; border:1px dashed var(--text-muted); margin-top:10px;"><input type="text" id="new_key_name_${ch.yt_id}" placeholder="Nama Key (Misal: Lofi Pagi)" style="width:30%; margin:0;"><input type="password" id="new_key_val_${ch.yt_id}" placeholder="Kunci: xxxx-xxxx-xxxx-xxxx" style="width:50%; margin:0;"><button class="btn-gold" style="width:20%; margin:0; padding:12px;" onclick="addStreamKey('${ch.yt_id}')">➕ ADD KEY</button></div></div></div>`;
-            });
-        }
-
-        function addStreamKey(yt_id) { const nameInput = document.getElementById('new_key_name_' + yt_id).value.trim(); const keyInput = document.getElementById('new_key_val_' + yt_id).value.trim(); if(!nameInput || !keyInput) { alert("Nama dan Stream Key wajib diisi!"); return; } let ch = cachedChannels.find(c => c.yt_id === yt_id); if(!ch.stream_keys) ch.stream_keys = []; if(ch.stream_keys.some(sk => sk.name.toLowerCase() === nameInput.toLowerCase())) { alert("Nama Key ini sudah ada!"); return; } ch.stream_keys.push({name: nameInput, key: keyInput}); syncStreamKeys(yt_id, ch.stream_keys); }
-        function removeStreamKey(yt_id, index) { if(confirm("Hapus key ini?")) { let ch = cachedChannels.find(c => c.yt_id === yt_id); ch.stream_keys.splice(index, 1); syncStreamKeys(yt_id, ch.stream_keys); } }
-        function syncStreamKeys(yt_id, keysArray) { const fd = new FormData(); fd.append('yt_id', yt_id); fd.append('stream_keys', JSON.stringify(keysArray)); fetch('/api/save_stream_key', {method: 'POST', body: fd}).then(r=>r.json()).then(d=>{ fetch('/api/get_channels').then(r => r.json()).then(data => { cachedChannels = data; renderSettingsGrid(); document.getElementById('body_toggle_' + yt_id).style.display = 'block'; document.getElementById('icon_toggle_' + yt_id).innerText = '🔼'; }); }); }
-        function handleLiveChannelSelect(selectElem) { const c = cachedChannels.find(ch => ch.yt_id === selectElem.value); const keyDropdown = document.getElementById('live_stream_key'); keyDropdown.innerHTML = '<option value="">-- Pilih Stream Key --</option>'; if(c && c.stream_keys && c.stream_keys.length > 0) { c.stream_keys.forEach((sk) => { let safeKey = sk.key.substring(0, 4) + "••••••••"; keyDropdown.innerHTML += `<option value="${sk.key}">[ ${sk.name} ] - ${safeKey}</option>`; }); } else { keyDropdown.innerHTML = '<option value="">⚠️ Belum ada Stream Key di Settings</option>'; } }
-
-        function loadChannels() { fetch('/api/get_channels').then(r => r.json()).then(data => { cachedChannels = data; const dds_vod = document.getElementById('vod_channel_select'); const dds_live = document.getElementById('live_channel_select'); const vod_val = dds_vod.value; const live_val = dds_live.value; dds_vod.innerHTML = '<option value="">-- Pilih Channel --</option>'; dds_live.innerHTML = '<option value="">-- Pilih Channel --</option>'; data.forEach(ch => { dds_vod.innerHTML += `<option value="${ch.yt_id}">${ch.name}</option>`; dds_live.innerHTML += `<option value="${ch.yt_id}">${ch.name}</option>`; }); if(vod_val) dds_vod.value = vod_val; if(live_val) { dds_live.value = live_val; handleLiveChannelSelect(dds_live); } renderSettingsGrid(); }); }
-        function fetchPlaylists(yt_id, target_select_id) { const plSelect = document.getElementById(target_select_id); if(!plSelect) return; plSelect.innerHTML = '<option value="">⏳ Mengambil Playlist...</option>'; if(!yt_id) { plSelect.innerHTML = '<option value="">-- Pilih Channel --</option>'; return; } fetch('/api/get_playlists?yt_id=' + yt_id).then(r => r.json()).then(data => { plSelect.innerHTML = '<option value="">-- Tidak Dimasukkan ke Playlist --</option>'; if(data.length === 0) plSelect.innerHTML += '<option value="" disabled>Belum ada playlist</option>'; else data.forEach(pl => plSelect.innerHTML += `<option value="${pl.id}">${pl.title}</option>`); }).catch(() => { plSelect.innerHTML = '<option value="">❌ Gagal mengambil data</option>'; }); }
-        let currentBaseSeconds = 0; function formatTime(secs) { const h = Math.floor(secs / 3600); const m = Math.floor((secs % 3600) / 60); const s = Math.floor(secs % 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; } function getAudioDuration(file) { return new Promise((resolve) => { const audio = new Audio(URL.createObjectURL(file)); audio.addEventListener('loadedmetadata', () => resolve(audio.duration)); audio.addEventListener('error', () => resolve(0)); }); } async function calcAudioDuration(inputElem, infoId) { const files = inputElem.files; if(files.length === 0) { currentBaseSeconds = 0; document.getElementById(infoId).innerText = "Durasi Asli: 00:00:00"; updateTotalDuration('vod'); return; } document.getElementById(infoId).innerText = "Menghitung..."; let total = 0; for(let i=0; i<files.length; i++) total += await getAudioDuration(files[i]); currentBaseSeconds = total; document.getElementById(infoId).innerText = "Durasi Asli: " + formatTime(total); updateTotalDuration('vod'); } function updateTotalDuration(mode) { const loops = parseInt(document.getElementById(mode + '_loop_count').value) || 1; document.getElementById(mode + '_total_info').innerText = "Estimasi VOD: " + formatTime(currentBaseSeconds * loops); }
-
-        function initApp() { injectVisualizer('visVod', 'vod'); injectVisualizer('visLive', 'live'); loadChannels(); fetchAnalyticsData(); checkApiStatus(); setInterval(updateTasksOnly, 2000); }
-
-        function updateTasksOnly() { fetch('/api/get_schedule').then(r => r.json()).then(data => { const tbVOD = document.getElementById('tabelAktifVOD'); tbVOD.innerHTML = ''; const tbLive = document.getElementById('tabelAktifLive'); tbLive.innerHTML = ''; const tbH = document.getElementById('tabelHistory'); tbH.innerHTML = ''; let vodCount = 0; let liveCount = 0; data.active.forEach(t => { let btnStop = `<button class="btn-stop" onclick="stopTask(${t.id})">⏹️ STOP</button>`; let row = `<tr><td>#${t.id}</td><td style="color:var(--text-main); font-weight:bold;">${t.title}</td><td>${t.time}</td><td style="color:var(--primary); font-weight:bold;">${t.status}</td><td>${btnStop}</td></tr>`; if(t.type.includes("VOD")) { tbVOD.innerHTML += row; vodCount++; } else { tbLive.innerHTML += row; liveCount++; } }); if(vodCount === 0) tbVOD.innerHTML = '<tr><td colspan="5" align="center" style="color:var(--text-muted); padding:15px;">Tidak ada VOD di antrean.</td></tr>'; if(liveCount === 0) tbLive.innerHTML = '<tr><td colspan="5" align="center" style="color:var(--text-muted); padding:15px;">Tidak ada Live Stream berjalan.</td></tr>'; data.history.forEach(t => { let c = t.status.includes('❌') ? 'var(--secondary)' : 'var(--text-muted)'; tbH.innerHTML += `<tr><td>#${t.id}</td><td>${t.type}</td><td style="font-weight:bold;">${t.title}</td><td style="color:${c};">${t.status}</td></tr>`; }); document.getElementById('tm_channels').innerText = cachedChannels.length; document.getElementById('tm_active').innerText = data.active.length; document.getElementById('tm_history').innerText = data.history.length; }); }
-        function stopTask(id) { if(confirm("Yakin mematikan paksa tugas ini?")) { fetch('/api/stop_task/' + id, {method:'POST'}).then(r=>r.json()).then(d=>{ alert(d.message); updateTasksOnly(); }); } }
-        
-        function generateTVLink() { 
-            fetch('/api/generate_tv_link').then(r => r.json()).then(d => { 
-                const box = document.getElementById('tvContainer');
-                const msg = document.getElementById('tvMsg');
-                const input = document.getElementById('tvUrl');
-                box.style.display='block'; 
-                if(d.error) {
-                    msg.innerText = d.error;
-                    msg.style.color = "var(--secondary)";
-                    input.style.display = "none";
-                    box.style.borderLeftColor = "var(--secondary)";
-                } else {
-                    msg.innerText = "Copy link di bawah dan paste di browser channel YouTube Anda.";
-                    msg.style.color = "var(--text-muted)";
-                    input.style.display = "block";
-                    input.value = d.auth_url; 
-                    box.style.borderLeftColor = "var(--primary)";
-                }
-            }); 
-        }
-
-        function copyTVUrl() { document.getElementById('tvUrl').select(); document.execCommand('copy'); alert('Link disalin!'); }
-        function submitForm(e, api) { e.preventDefault(); fetch(api, { method: 'POST', body: new FormData(e.target) }).then(r => r.json()).then(d => { if(d.status === 'error') { alert("❌ " + d.message); return; } alert("✔️ " + d.message); e.target.reset(); e.target.querySelectorAll('input[type=range]').forEach(el => el.dispatchEvent(new Event('input'))); updateTasksOnly(); switchTab('tasks'); }); }
-
-        function injectVisualizer(cId, mode) { document.getElementById(cId).innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;"><span style="color:var(--primary); font-weight:bold;">🎨 VISUALIZER PRO SETTINGS</span><div><button type="button" class="btn-small" onclick="savePreset('${mode}')">💾 SAVE PRESET</button><button type="button" class="btn-small" onclick="loadPreset('${mode}')">📂 LOAD PRESET</button></div></div><div class="grid-3"><div class="slider-group"><label>Base Color</label><input type="color" id="${mode}_color_bot" name="color_bot" value="#38bdf8"></div><div class="slider-group"><label>Peak Color</label><input type="color" id="${mode}_color_top" name="color_top" value="#f472b6"></div><div class="slider-group"><label>Part Color</label><input type="color" id="${mode}_color_part" name="color_part" value="#ffffff"></div></div><div class="grid-3"><div class="slider-group"><label>X Pos <span class="val-badge" id="v_${mode}_px">50%</span></label><input type="range" id="${mode}_pos_x" name="pos_x" min="0" max="100" value="50" oninput="uVal('v_${mode}_px',this.value,'%')"></div><div class="slider-group"><label>Y Pos <span class="val-badge" id="v_${mode}_py">85%</span></label><input type="range" id="${mode}_pos_y" name="pos_y" min="0" max="100" value="85" oninput="uVal('v_${mode}_py',this.value,'%')"></div><div class="slider-group"><label>Width <span class="val-badge" id="v_${mode}_wp">60%</span></label><input type="range" id="${mode}_width_pct" name="width_pct" min="10" max="100" value="60" oninput="uVal('v_${mode}_wp',this.value,'%')"></div><div class="slider-group"><label>Limit <span class="val-badge" id="v_${mode}_mh">40%</span></label><input type="range" id="${mode}_max_height" name="max_height" min="10" max="100" value="40" oninput="uVal('v_${mode}_mh',this.value,'%')"></div><div class="slider-group"><label>Idle <span class="val-badge" id="v_${mode}_ih">5px</span></label><input type="range" id="${mode}_idle_height" name="idle_height" min="0" max="50" value="5" oninput="uVal('v_${mode}_ih',this.value,'px')"></div><div class="slider-group"><label>Density <span class="val-badge" id="v_${mode}_bc">64</span></label><input type="range" id="${mode}_bar_count" name="bar_count" min="10" max="200" value="64" oninput="uVal('v_${mode}_bc',this.value,'')"></div><div class="slider-group"><label>React <span class="val-badge" id="v_${mode}_r">0.66x</span></label><input type="range" id="${mode}_reactivity" name="reactivity" min="0.1" max="4.0" step="0.01" value="0.66" oninput="uVal('v_${mode}_r',this.value,'x')"></div><div class="slider-group"><label>Gravity <span class="val-badge" id="v_${mode}_g">0.08</span></label><input type="range" id="${mode}_gravity" name="gravity" min="0.01" max="0.50" step="0.01" value="0.08" oninput="uVal('v_${mode}_g',this.value,'')"></div><div class="slider-group"><label>Gap <span class="val-badge" id="v_${mode}_sp">3px</span></label><input type="range" id="${mode}_spacing" name="spacing" min="0" max="20" value="3" oninput="uVal('v_${mode}_sp',this.value,'px')"></div><div class="slider-group"><label>Part Amount <span class="val-badge" id="v_${mode}_pa">3</span></label><input type="range" id="${mode}_part_amount" name="part_amount" min="0" max="300" value="3" oninput="uVal('v_${mode}_pa',this.value,'')"></div><div class="slider-group"><label>Part Speed <span class="val-badge" id="v_${mode}_ps">1.0x</span></label><input type="range" id="${mode}_part_speed" name="part_speed" min="0.1" max="5.0" step="0.1" value="1.0" oninput="uVal('v_${mode}_ps',this.value,'x')"></div></div>`; }
-        function uVal(id,v,s) { document.getElementById(id).innerText = v+s; }
-        function switchTab(tId) { document.querySelectorAll('.panel').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); document.getElementById(tId).classList.add('active'); document.getElementById(`btn-${tId}`).classList.add('active'); if(tId==='dashboard') fetchAnalyticsData(); }
-        function hexToRgb(h) { let b = parseInt(h.replace('#', ''), 16); return [(b >> 16) & 255, (b >> 8) & 255, b & 255]; } function rgbToHex(r, g, b) { return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase(); }
-        function savePreset(mode) { const p = { toggles: { enable: true, spectrum: true, particles: document.getElementById(`${mode}_part_amount`).value > 0, flux_mode: false }, colors: { bot: hexToRgb(document.getElementById(`${mode}_color_bot`).value), top: hexToRgb(document.getElementById(`${mode}_color_top`).value), part: hexToRgb(document.getElementById(`${mode}_color_part`).value) }, sliders: { pos_x: document.getElementById(`${mode}_pos_x`).value / 100, pos_y: document.getElementById(`${mode}_pos_y`).value / 100, spec_width: document.getElementById(`${mode}_width_pct`).value / 100, height_limit: document.getElementById(`${mode}_max_height`).value / 100, min_height: parseFloat(document.getElementById(`${mode}_idle_height`).value), reactivity: parseFloat(document.getElementById(`${mode}_reactivity`).value), fall_speed: parseFloat(document.getElementById(`${mode}_gravity`).value), bar_count: parseFloat(document.getElementById(`${mode}_bar_count`).value), bar_gap: parseFloat(document.getElementById(`${mode}_spacing`).value), part_density: parseFloat(document.getElementById(`${mode}_part_amount`).value), part_speed: parseFloat(document.getElementById(`${mode}_part_speed`).value), flux_speed: 0.007, flux_decay: 0.69 } }; const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(p, null, 4)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", `KeiBot_${mode.toUpperCase()}.json`); dl.click(); }
-        function loadPreset(mode) { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = e => { const reader = new FileReader(); reader.onload = ev => { const p = JSON.parse(ev.target.result); document.getElementById(`${mode}_color_bot`).value = rgbToHex(p.colors.bot[0], p.colors.bot[1], p.colors.bot[2]); document.getElementById(`${mode}_color_top`).value = rgbToHex(p.colors.top[0], p.colors.top[1], p.colors.top[2]); document.getElementById(`${mode}_color_part`).value = rgbToHex(p.colors.part[0], p.colors.part[1], p.colors.part[2]); document.getElementById(`${mode}_pos_x`).value = p.sliders.pos_x * 100; document.getElementById(`${mode}_pos_y`).value = p.sliders.pos_y * 100; document.getElementById(`${mode}_width_pct`).value = p.sliders.spec_width * 100; document.getElementById(`${mode}_max_height`).value = p.sliders.height_limit * 100; document.getElementById(`${mode}_idle_height`).value = p.sliders.min_height; document.getElementById(`${mode}_reactivity`).value = p.sliders.reactivity; document.getElementById(`${mode}_gravity`).value = p.sliders.fall_speed; document.getElementById(`${mode}_bar_count`).value = p.sliders.bar_count; document.getElementById(`${mode}_spacing`).value = p.sliders.bar_gap; document.getElementById(`${mode}_part_amount`).value = p.sliders.part_density; document.getElementById(`${mode}_part_speed`).value = p.sliders.part_speed; document.querySelectorAll(`#${mode} input[type=range]`).forEach(el => el.dispatchEvent(new Event('input'))); }; reader.readAsText(e.target.files[0]); }; input.click(); }
-    </script>
-    <div id="sys-monitor" style="position: fixed; bottom: 20px; right: 20px; background: rgba(30,30,47,0.8); border: 1px solid #444; padding: 15px; border-radius: 10px; color: white; font-family: Arial; font-size: 13px; z-index: 9999; box-shadow: 0 5px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
-        <div style="margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 5px;"><b style="color:#00ffcc;">💻 SERVER LOAD</b></div>
-        <div>CPU: <span id="sys-cpu" style="font-weight:bold; color:#ff0055;">0%</span></div>
-        <div style="margin-top: 5px;">RAM: <span id="sys-ram-pct" style="font-weight:bold; color:#00cc66;">0%</span></div>
-        <div id="sys-ram-text" style="color: #aaa; font-size: 11px; margin-top: 3px;">0GB / 0GB</div>
-    </div>
-    <script>
-        // Update data otomatis setiap 3 detik
-        setInterval(() => {
-            fetch('/api/get_dashboard_stats')
-            .then(r => r.json())
-            .then(d => {
+        function fetchData() {
+            // Monitor System & Dashboard
+            fetch('/api/get_dashboard_stats').then(r=>r.json()).then(d => {
+                document.getElementById('stat-channels').innerText = d.channels || 0;
+                document.getElementById('stat-active').innerText = d.active_tasks || 0;
+                document.getElementById('stat-history').innerText = d.history_tasks || 0;
                 if(d.sys_cpu !== undefined) {
                     document.getElementById('sys-cpu').innerText = d.sys_cpu + '%';
                     document.getElementById('sys-ram-pct').innerText = d.sys_ram_pct + '%';
                     document.getElementById('sys-ram-text').innerText = d.sys_ram_text;
                 }
-            }).catch(e => {});
-        }, 3000);
-    </script>
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Cari semua form yang ada di halaman web Anda
-        const forms = document.querySelectorAll("form");
-        
-        forms.forEach(form => {
-            // Kita hanya mencegat form untuk VOD dan LIVE
-            if(form.action.includes("/api/upload_vod") || form.action.includes("/api/schedule_live")) {
-                
-                form.addEventListener("submit", function(e) {
-                    // 1. CEGAH BROWSER FREEZE / RELOAD HALAMAN!
-                    e.preventDefault(); 
-                    
-                    let btn = form.querySelector("button[type='submit']");
-                    let originalText = btn.innerHTML;
-                    let originalColor = btn.style.background;
-                    
-                    // 2. INDIKATOR MERAH (Mulai Upload ke VPS)
-                    btn.innerHTML = "Mengunggah File... 🔴 0%";
-                    btn.style.background = "#ff0055"; // Warna merah
-                    btn.style.color = "white";
-                    btn.disabled = true; // Kunci tombol agar tidak di-klik 2x
+            }).catch(()=>{});
 
-                    let formData = new FormData(form);
-                    let xhr = new XMLHttpRequest();
-                    xhr.open("POST", form.action, true);
-                    
-                    // 3. PANTAU PERSENTASE UPLOAD REAL-TIME KE VPS
-                    xhr.upload.onprogress = function(event) {
-                        if (event.lengthComputable) {
-                            let percent = Math.round((event.loaded / event.total) * 100);
-                            btn.innerHTML = `Mendorong ke Server... 🔴 ${percent}%`;
-                        }
-                    };
-                    
-                    // 4. INDIKATOR HIJAU (File Sukses Diterima Python & Masuk Antrean)
-                    xhr.onload = function() {
-                        if (xhr.status === 200) {
-                            btn.innerHTML = "Selesai! Masuk Task Monitor 🟢";
-                            btn.style.background = "#00cc66"; // Warna hijau
-                            
-                            // Kembalikan tombol seperti semula setelah 3 detik
-                            setTimeout(() => { 
-                                btn.innerHTML = originalText; 
-                                btn.style.background = originalColor;
-                                btn.disabled = false; 
-                                form.reset(); // Bersihkan isi form otomatis
-                            }, 3000);
-                        } else {
-                            btn.innerHTML = "Gagal Upload ❌";
-                            setTimeout(() => { 
-                                btn.innerHTML = originalText; 
-                                btn.style.background = originalColor;
-                                btn.disabled = false; 
-                            }, 3000);
-                        }
-                    };
-                    
-                    // Kirim data secara siluman di latar belakang
-                    xhr.send(formData);
-                });
+            // Update Tabel Task Monitor
+            fetch('/api/get_schedule').then(r=>r.json()).then(d => {
+                let actHtml = '';
+                if(d.active.length === 0) actHtml = '<tr><td colspan="5" class="text-center text-gray-500 py-6 text-sm">Tidak ada task di antrean.</td></tr>';
+                else d.active.forEach(t => actHtml += `<tr><td><span class="text-gray-500">#${t.id}</span></td><td><b class="text-white">${t.title}</b></td><td class="text-gray-400">${t.time}</td><td class="text-cyan font-bold">${t.status}</td><td><button onclick="stopTask(${t.id})" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold transition">STOP ❌</button></td></tr>`);
+                document.getElementById('table-active').innerHTML = actHtml;
+
+                let hisHtml = '';
+                if(d.history.length === 0) hisHtml = '<tr><td colspan="4" class="text-center text-gray-500 py-6 text-sm">Belum ada history.</td></tr>';
+                else d.history.forEach(t => hisHtml += `<tr><td><span class="text-gray-500">#${t.id}</span></td><td class="text-gray-400">${t.type}</td><td><b class="text-white">${t.title}</b></td><td class="${t.status.includes('Gagal') ? 'text-pink' : 'text-gray-400'}">${t.status}</td></tr>`);
+                document.getElementById('table-history').innerHTML = hisHtml;
+            }).catch(()=>{});
+
+            // Update Dropdown Channel
+            fetch('/api/get_channels').then(r=>r.json()).then(d => {
+                channelDataCache = d;
+                let opts = '<option value="">-- Pilih Target Channel --</option>';
+                d.forEach(c => opts += `<option value="${c.yt_id}">${c.name}</option>`);
+                
+                let vChan = document.getElementById('vod-channel');
+                let lChan = document.getElementById('live-channel');
+                if(vChan.options.length <= 1 || vChan.innerHTML !== opts) vChan.innerHTML = opts;
+                if(lChan.options.length <= 1 || lChan.innerHTML !== opts) lChan.innerHTML = opts;
+            }).catch(()=>{});
+
+            // Update Status API Key
+            fetch('/api/check_secret').then(r=>r.json()).then(d => {
+                let st = document.getElementById('api-status');
+                if(d.exists) { st.innerText = "🟢 API AKTIF"; st.className = "bg-[#00ffcc] text-black px-3 py-1 rounded text-[10px] font-bold tracking-wider"; }
+                else { st.innerText = "🔴 API KOSONG"; st.className = "bg-red-600 text-white px-3 py-1 rounded text-[10px] font-bold tracking-wider"; }
+            }).catch(()=>{});
+        }
+
+        function updateStreamKeys() {
+            let sel = document.getElementById('live-channel').value;
+            let kDrop = document.getElementById('live-key');
+            kDrop.innerHTML = '<option value="">-- Pilih Stream Key --</option>';
+            let c = channelDataCache.find(x => x.yt_id === sel);
+            if(c && c.stream_keys) {
+                c.stream_keys.forEach(k => kDrop.innerHTML += `<option value="${k.key}">${k.name}</option>`);
             }
-        });
-    });
+        }
+
+        function stopTask(id) { fetch(`/api/stop_task/${id}`, {method:'POST'}).then(()=>fetchData()); }
+        
+        function uploadSecret() {
+            let f = document.getElementById('secret_file').files[0];
+            if(!f) return alert('Pilih file client_secret.json dulu!');
+            let fd = new FormData(); fd.append('secret_file', f);
+            fetch('/api/upload_secret', {method:'POST', body:fd}).then(r=>r.json()).then(d=> { alert(d.message); fetchData(); });
+        }
+
+        function generateLink() {
+            fetch('/api/generate_tv_link').then(r=>r.json()).then(d => {
+                if(d.error) alert(d.error);
+                else document.getElementById('tv-link').value = d.auth_url;
+            });
+        }
+
+        function copyLink() {
+            let t = document.getElementById('tv-link');
+            t.select(); document.execCommand('copy');
+            alert('Link Multi-Profil berhasil di-copy! Silakan paste di tab browser YouTube Anda.');
+        }
+
+        // Mesin Radar akan mengecek perubahan setiap 2 detik
+        setInterval(fetchData, 2000);
+        fetchData();
     </script>
 </body>
 </html>
