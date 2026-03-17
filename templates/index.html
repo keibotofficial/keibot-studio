@@ -358,5 +358,70 @@
             }).catch(e => {});
         }, 3000);
     </script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Cari semua form yang ada di halaman web Anda
+        const forms = document.querySelectorAll("form");
+        
+        forms.forEach(form => {
+            // Kita hanya mencegat form untuk VOD dan LIVE
+            if(form.action.includes("/api/upload_vod") || form.action.includes("/api/schedule_live")) {
+                
+                form.addEventListener("submit", function(e) {
+                    // 1. CEGAH BROWSER FREEZE / RELOAD HALAMAN!
+                    e.preventDefault(); 
+                    
+                    let btn = form.querySelector("button[type='submit']");
+                    let originalText = btn.innerHTML;
+                    let originalColor = btn.style.background;
+                    
+                    // 2. INDIKATOR MERAH (Mulai Upload ke VPS)
+                    btn.innerHTML = "Mengunggah File... 🔴 0%";
+                    btn.style.background = "#ff0055"; // Warna merah
+                    btn.style.color = "white";
+                    btn.disabled = true; // Kunci tombol agar tidak di-klik 2x
+
+                    let formData = new FormData(form);
+                    let xhr = new XMLHttpRequest();
+                    xhr.open("POST", form.action, true);
+                    
+                    // 3. PANTAU PERSENTASE UPLOAD REAL-TIME KE VPS
+                    xhr.upload.onprogress = function(event) {
+                        if (event.lengthComputable) {
+                            let percent = Math.round((event.loaded / event.total) * 100);
+                            btn.innerHTML = `Mendorong ke Server... 🔴 ${percent}%`;
+                        }
+                    };
+                    
+                    // 4. INDIKATOR HIJAU (File Sukses Diterima Python & Masuk Antrean)
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            btn.innerHTML = "Selesai! Masuk Task Monitor 🟢";
+                            btn.style.background = "#00cc66"; // Warna hijau
+                            
+                            // Kembalikan tombol seperti semula setelah 3 detik
+                            setTimeout(() => { 
+                                btn.innerHTML = originalText; 
+                                btn.style.background = originalColor;
+                                btn.disabled = false; 
+                                form.reset(); // Bersihkan isi form otomatis
+                            }, 3000);
+                        } else {
+                            btn.innerHTML = "Gagal Upload ❌";
+                            setTimeout(() => { 
+                                btn.innerHTML = originalText; 
+                                btn.style.background = originalColor;
+                                btn.disabled = false; 
+                            }, 3000);
+                        }
+                    };
+                    
+                    // Kirim data secara siluman di latar belakang
+                    xhr.send(formData);
+                });
+            }
+        });
+    });
+    </script>
 </body>
 </html>
