@@ -16,7 +16,7 @@ import requests
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 
 # ==========================================
-# 🛡️ AUTO-SETUP DEPENDENCIES (MURNI TANPA PSUTIL)
+# 🛡️ AUTO-SETUP DEPENDENCIES & MONITORING MURNI
 # ==========================================
 def auto_setup_dependencies():
     if not os.path.exists("/usr/bin/ffmpeg") and shutil.which("ffmpeg") is None:
@@ -27,13 +27,34 @@ def auto_setup_dependencies():
 
 auto_setup_dependencies()
 
-def get_system_stats():
-    try:
-        load1 = os.getloadavg()[0]
-        cpu_count = os.cpu_count() or 1
-        cpu_pct = round((load1 / cpu_count) * 100, 1)
-        if cpu_pct > 100.0: cpu_pct = 100.0
+# Menyimpan riwayat CPU untuk perhitungan Real-time
+last_cpu_idle = 0
+last_cpu_total = 0
 
+def get_system_stats():
+    global last_cpu_idle, last_cpu_total
+    cpu_pct = 0.0
+    # 1. Hitung CPU Real-time murni (Tanpa Library)
+    try:
+        with open('/proc/stat', 'r') as f:
+            parts = [int(i) for i in f.readline().split()[1:8]]
+        idle = parts[3] + parts[4]
+        total = sum(parts)
+        
+        if last_cpu_total > 0:
+            diff_idle = idle - last_cpu_idle
+            diff_total = total - last_cpu_total
+            if diff_total > 0:
+                cpu_pct = round(100.0 * (1.0 - diff_idle / diff_total), 1)
+        
+        last_cpu_idle = idle
+        last_cpu_total = total
+        if cpu_pct < 0.0: cpu_pct = 0.0
+        if cpu_pct > 100.0: cpu_pct = 100.0
+    except: pass
+
+    # 2. Hitung RAM Real-time murni
+    try:
         mem_total = 0; mem_avail = 0
         with open('/proc/meminfo', 'r') as f:
             for line in f:
@@ -47,7 +68,8 @@ def get_system_stats():
             ram_total_gb = round(mem_total / (1024*1024), 2)
             return {"cpu": cpu_pct, "ram_pct": ram_pct, "ram_used": ram_used_gb, "ram_total": ram_total_gb}
     except: pass
-    return {"cpu": 0.0, "ram_pct": 0.0, "ram_used": 0.0, "ram_total": 0.0}
+    
+    return {"cpu": cpu_pct, "ram_pct": 0.0, "ram_used": 0.0, "ram_total": 0.0}
 # ==========================================
 
 from google_auth_oauthlib.flow import Flow
@@ -385,7 +407,6 @@ threading.Thread(target=background_worker, daemon=True).start()
 
 def run_live_stream(task_id, stream_key, audio_paths, bg_paths, start_time_str, end_time_str, cfg, metadata):
     try:
-        # --- PERBAIKAN: FFmpeg Audio Concat dipindah ke Background Thread ---
         for d in active_tasks:
             if d['id'] == task_id: d['status'] = "Menyiapkan Playlist Audio ⚙️"
         m_audio = f"uploads/live_{task_id}/m.mp3"; c_txt = f"uploads/live_{task_id}/c.txt"
@@ -394,8 +415,7 @@ def run_live_stream(task_id, stream_key, audio_paths, bg_paths, start_time_str, 
                 c_ap = os.path.abspath(ap).replace('\\', '/')
                 f.write(f"file '{c_ap}'\n")
         subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', c_txt, '-c', 'copy', m_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        # ---------------------------------------------------------------------
-
+        
         start_obj = datetime.strptime(start_time_str.replace('T', ' '), "%Y-%m-%d %H:%M")
         while datetime.now() < start_obj:
             if stop_flags.get(task_id): raise Exception("Dibatalkan")
@@ -520,7 +540,6 @@ def handle_schedule_live():
 
     metadata = {"channel_yt_id": yt_id, "title": request.form.get('title', ''), "description": request.form.get('description', ''), "tags": request.form.get('tags', ''), "thumbnail_path": thumb_path}
     
-    # --- PERBAIKAN: API Langsung menjawab sukses tanpa menunggu FFMPEG ---
     active_tasks.append({"id": t_id, "type": "🔴 LIVE", "title": metadata['title'], "time": f"Mulai: {request.form.get('schedule_start').replace('T', ' ')}", "status": "In Queue ⏳"})
     threading.Thread(target=run_live_stream, args=(t_id, stream_key, a_ps, v_ps, request.form.get('schedule_start'), request.form.get('schedule_end'), request.form, metadata)).start()
     return jsonify({"status": "success", "message": "Live Engine Dijadwalkan!"})
