@@ -16,19 +16,33 @@ import requests
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 
 # ==========================================
-# 🛡️ AUTO-SETUP DEPENDENCIES (MODE PAKSA)
+# 🛡️ AUTO-SETUP DEPENDENCIES & MONITORING
 # ==========================================
 def auto_setup_dependencies():
-    # Cek apakah FFMPEG ada di folder sistem Linux
+    # Install ffmpeg dan psutil (untuk monitor RAM/CPU) secara diam-diam
     if not os.path.exists("/usr/bin/ffmpeg") and shutil.which("ffmpeg") is None:
         try:
-            print("⚙️ KeiBot: Memaksa instalasi FFMPEG ke sistem Linux...")
-            # Menggunakan os.system agar dieksekusi sebagai perintah terminal asli
-            os.system("apt-get update && apt-get install -y ffmpeg")
-        except Exception as e:
-            print("Gagal auto-install:", e)
+            print("⚙️ KeiBot: Memaksa instalasi FFMPEG & PSUTIL ke sistem Linux...")
+            os.system("apt-get update && apt-get install -y ffmpeg python3-psutil")
+        except Exception as e: pass
+    else:
+        try: import psutil
+        except ImportError: os.system("apt-get update && apt-get install -y python3-psutil")
 
 auto_setup_dependencies()
+
+def get_system_stats():
+    try:
+        import psutil
+        cpu = psutil.cpu_percent(interval=0.1)
+        ram = psutil.virtual_memory()
+        return {
+            "cpu": cpu, "ram_pct": ram.percent,
+            "ram_used": round(ram.used / (1024**3), 2),
+            "ram_total": round(ram.total / (1024**3), 2)
+        }
+    except:
+        return {"cpu": 0.0, "ram_pct": 0.0, "ram_used": 0.0, "ram_total": 0.0}
 # ==========================================
 
 from google_auth_oauthlib.flow import Flow
@@ -63,21 +77,11 @@ active_tasks = []; history_tasks = []
 render_queue = queue.Queue()
 live_threads = {}; stop_flags = {}; active_stream_keys = set()
 
-# ==========================================
-# 🔍 DETEKTOR FFMPEG ANTI-GAGAL
-# ==========================================
 def get_ffmpeg_path():
-    # 1. Cek mode Windows
     local_path = os.path.join(os.path.abspath("."), "ffmpeg.exe")
-    if os.path.exists(local_path): 
-        return local_path
-    
-    # 2. Cek mode VPS Linux (Bypass systemd restriction)
+    if os.path.exists(local_path): return local_path
     linux_path = "/usr/bin/ffmpeg"
-    if os.path.exists(linux_path): 
-        return linux_path
-        
-    # 3. Fallback
+    if os.path.exists(linux_path): return linux_path
     return "ffmpeg"
 
 def move_to_history(task_id, final_status):
@@ -89,7 +93,7 @@ def move_to_history(task_id, final_status):
             break
 
 # ==========================================
-# ⚙️ PENGATURAN API GOOGLE (UPLOAD DARI WEB)
+# ⚙️ PENGATURAN API GOOGLE
 # ==========================================
 @app.route('/api/check_secret')
 def check_secret():
@@ -100,26 +104,19 @@ def upload_secret():
     file = request.files.get('secret_file')
     if file and file.filename.endswith('.json'):
         file.save(CLIENT_SECRETS_FILE)
-        return jsonify({"status": "success", "message": "API Key Google berhasil diunggah dan disimpan!"})
+        return jsonify({"status": "success", "message": "API Key Google berhasil diunggah!"})
     return jsonify({"status": "error", "message": "Gagal! Pastikan file berekstensi .json"})
 
-# ==========================================
-# ⚙️ SETTINGS & CHANNEL MANAGEMENT API (SMART LOGIN MULTI-PROFIL)
-# ==========================================
 @app.route('/api/generate_tv_link')
 def generate_tv_link():
-    if not os.path.exists(CLIENT_SECRETS_FILE):
-        return jsonify({"auth_url": "", "error": "File client_secret.json belum diupload!"})
+    if not os.path.exists(CLIENT_SECRETS_FILE): return jsonify({"auth_url": "", "error": "File client_secret.json belum diupload!"})
     return jsonify({"auth_url": f"http://{request.host}/device_login"})
 
 @app.route('/device_login')
 def device_login():
     if not os.path.exists(CLIENT_SECRETS_FILE): return "File rahasia tidak ditemukan!"
     with open(CLIENT_SECRETS_FILE, 'r') as f:
-        secret_data = json.load(f)
-        client_config = secret_data.get('installed', secret_data.get('web', {}))
-        client_id = client_config.get('client_id')
-
+        secret_data = json.load(f); client_config = secret_data.get('installed', secret_data.get('web', {})); client_id = client_config.get('client_id')
     res = requests.post('https://oauth2.googleapis.com/device/code', data={'client_id': client_id, 'scope': ' '.join(SCOPES)}).json()
     if 'error' in res: return f"Error Google: {res['error']}"
 
@@ -155,29 +152,19 @@ def device_login():
         </div>
         <script>
             function copyTxt(id, btn) {{
-                var copyText = document.getElementById(id);
-                copyText.select();
-                document.execCommand("copy");
-                var oldTxt = btn.innerHTML;
-                btn.innerHTML = "✅ Copied!";
-                btn.style.background = "#00cc66";
+                var copyText = document.getElementById(id); copyText.select(); document.execCommand("copy");
+                var oldTxt = btn.innerHTML; btn.innerHTML = "✅ Copied!"; btn.style.background = "#00cc66";
                 setTimeout(() => {{ btn.innerHTML = oldTxt; btn.style.background = "#ff0055"; }}, 2000);
             }}
             function poll() {{
                 fetch('/api/poll_device_token', {{
-                    method: 'POST', headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{device_code: '{res['device_code']}'}})
+                    method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{device_code: '{res['device_code']}'}})
                 }}).then(r => r.json()).then(data => {{
                     if(data.status === 'success') {{
-                        document.getElementById('status').innerHTML = "✅ <b>Channel Berhasil Terhubung!</b> Mengalihkan...";
-                        document.getElementById('status').style.color = "#00ffcc";
-                        document.getElementById('status').style.borderColor = "#00ffcc";
-                        setTimeout(() => {{ window.location.href = '/'; }}, 2000);
-                    }} else if(data.status === 'pending') {{
-                        setTimeout(poll, 4000);
-                    }} else {{
-                        document.getElementById('status').innerHTML = "❌ Gagal: " + data.error;
-                    }}
+                        document.getElementById('status').innerHTML = "✅ <b>Channel Terhubung!</b> Mengalihkan...";
+                        document.getElementById('status').style.color = "#00ffcc"; setTimeout(() => {{ window.location.href = '/'; }}, 2000);
+                    }} else if(data.status === 'pending') {{ setTimeout(poll, 4000);
+                    }} else {{ document.getElementById('status').innerHTML = "❌ Gagal: " + data.error; }}
                 }});
             }}
             setTimeout(poll, 4000);
@@ -190,17 +177,12 @@ def device_login():
 def poll_device_token():
     device_code = request.json.get('device_code')
     with open(CLIENT_SECRETS_FILE, 'r') as f:
-        s_data = json.load(f); conf = s_data.get('installed', s_data.get('web', {}))
-        c_id = conf.get('client_id'); c_sec = conf.get('client_secret')
-
+        s_data = json.load(f); conf = s_data.get('installed', s_data.get('web', {})); c_id = conf.get('client_id'); c_sec = conf.get('client_secret')
     res = requests.post('https://oauth2.googleapis.com/token', data={'client_id': c_id, 'client_secret': c_sec, 'device_code': device_code, 'grant_type': 'urn:ietf:params:oauth:grant-type:device_code'}).json()
-    
-    if 'error' in res:
-        return jsonify({"status": "pending"}) if res['error'] == 'authorization_pending' else jsonify({"status": "error", "error": res['error']})
+    if 'error' in res: return jsonify({"status": "pending"}) if res['error'] == 'authorization_pending' else jsonify({"status": "error", "error": res['error']})
 
     creds = Credentials(token=res['access_token'], refresh_token=res.get('refresh_token'), token_uri='https://oauth2.googleapis.com/token', client_id=c_id, client_secret=c_sec, scopes=SCOPES)
-    youtube = build('youtube', 'v3', credentials=creds)
-    chan_res = youtube.channels().list(part="snippet", mine=True).execute()
+    youtube = build('youtube', 'v3', credentials=creds); chan_res = youtube.channels().list(part="snippet", mine=True).execute()
     
     if chan_res['items']:
         item = chan_res['items'][0]; global database_channel
@@ -209,19 +191,15 @@ def poll_device_token():
         if c_idx is None: database_channel.append(new_c)
         else: database_channel[c_idx] = new_c
         save_channels(database_channel)
-        
     return jsonify({"status": "success"})
 
 @app.route('/api/save_stream_key', methods=['POST'])
 def save_stream_key():
-    yt_id = request.form.get('yt_id')
-    keys_json = request.form.get('stream_keys')
+    yt_id = request.form.get('yt_id'); keys_json = request.form.get('stream_keys')
     try: keys_list = json.loads(keys_json)
     except: keys_list = []
     for c in database_channel:
-        if c['yt_id'] == yt_id:
-            c['stream_keys'] = keys_list; save_channels(database_channel)
-            return jsonify({"status": "success", "message": "Stream Key berhasil diperbarui!"})
+        if c['yt_id'] == yt_id: c['stream_keys'] = keys_list; save_channels(database_channel); return jsonify({"status": "success", "message": "Stream Key diperbarui!"})
     return jsonify({"status": "error", "message": "Channel tidak ditemukan."})
 
 @app.route('/api/get_playlists', methods=['GET'])
@@ -306,7 +284,7 @@ class VisualEngine:
             while len(self.particles) < p_amt: self.particles.append([np.random.randint(0,w), np.random.randint(0,h), np.random.uniform(0.5,2.0), np.random.randint(1,4)])
             while len(self.particles) > p_amt: self.particles.pop()
             for p in self.particles:
-                p[1] -= p[2] * p_spd * (1.0 + (vol * 0.1))
+                p[1] -= p[2] * p_spd * (1.0 + (vol * 0.1)); 
                 if p[1] < 0: p[1] = h; p[0] = np.random.randint(0, w)
                 cv2.circle(frame, (int(p[0]), int(p[1])), p[3], self.col_part, -1)
         return frame
@@ -332,9 +310,7 @@ def background_worker():
                 if d['id'] == task_id: d['status'] = "Menyiapkan Base Audio ⚙️"
             base_audio = f"uploads/base_a_{task_id}.mp3"; c_txt = f"uploads/c_{task_id}.txt"
             with open(c_txt, 'w', encoding='utf-8') as f:
-                for ap in task['audio_paths']:
-                    clean_ap = os.path.abspath(ap).replace('\\', '/')
-                    f.write(f"file '{clean_ap}'\n")
+                for ap in task['audio_paths']: f.write(f"file '{os.path.abspath(ap).replace('\\', '/')}'\n")
             subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', c_txt, '-c', 'copy', base_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             audio = AudioBrain(); audio.load(base_audio); base_dur = audio.duration if audio.duration > 0 else 10
             
@@ -351,9 +327,7 @@ def background_worker():
                     if d['id'] == task_id: d['status'] = f"Menggandakan Video {loop_count}x 🚀"
                 loop_txt = f"uploads/loop_{task_id}.txt"
                 with open(loop_txt, 'w', encoding='utf-8') as f:
-                    for _ in range(loop_count):
-                        clean_base = os.path.abspath(base_video).replace('\\', '/')
-                        f.write(f"file '{clean_base}'\n")
+                    for _ in range(loop_count): f.write(f"file '{os.path.abspath(base_video).replace('\\', '/')}'\n")
                 subprocess.run([get_ffmpeg_path(), '-y', '-f', 'concat', '-safe', '0', '-i', loop_txt, '-c', 'copy', out_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else: shutil.copy(base_video, out_file)
 
@@ -412,15 +386,30 @@ def run_live_stream(task_id, stream_key, audio_path, bg_paths, start_time_str, e
         for d in active_tasks:
             if d['id'] == task_id: d['status'] = "Memperbarui Metadata Live... 📡"
         channel_data = next((c for c in database_channel if c['yt_id'] == metadata['channel_yt_id']), None)
+        
+        # --- PERBAIKAN JALUR BELAKANG UPDATE METADATA LIVE YOUTUBE ---
         if channel_data:
             try:
                 creds = Credentials.from_authorized_user_info(json.loads(channel_data['creds_json'])); youtube = build('youtube', 'v3', credentials=creds)
-                live_res = youtube.liveBroadcasts().list(part="snippet", broadcastType="persistent", mine=True).execute()
-                if live_res['items']:
-                    broadcast = live_res['items'][0]; broadcast['snippet']['title'] = metadata['title']; broadcast['snippet']['description'] = metadata['description']
-                    youtube.liveBroadcasts().update(part="snippet", body=broadcast).execute()
-                    if metadata.get('thumbnail_path') and os.path.exists(metadata['thumbnail_path']): youtube.thumbnails().set(videoId=broadcast['id'], media_body=MediaFileUpload(metadata['thumbnail_path'])).execute()
-            except Exception as e: print("Live API Error:", e) 
+                # Cari status siaran yang Active atau Upcoming
+                live_res = youtube.liveBroadcasts().list(part="snippet", broadcastStatus="active", broadcastType="all").execute()
+                if not live_res.get('items'):
+                    live_res = youtube.liveBroadcasts().list(part="snippet", broadcastStatus="upcoming", broadcastType="all").execute()
+                
+                if live_res.get('items'):
+                    b_id = live_res['items'][0]['id']
+                    # TIMPA LANGSUNG KONTANER VIDEONYA (Bypass aturan ketat Broadcast)
+                    video_res = youtube.videos().list(part="snippet", id=b_id).execute()
+                    if video_res.get('items'):
+                        v_snip = video_res['items'][0]['snippet']
+                        v_snip['title'] = metadata['title']
+                        v_snip['description'] = metadata['description']
+                        youtube.videos().update(part="snippet", body={"id": b_id, "snippet": v_snip}).execute()
+                    
+                    if metadata.get('thumbnail_path') and os.path.exists(metadata['thumbnail_path']):
+                        youtube.thumbnails().set(videoId=b_id, media_body=MediaFileUpload(metadata['thumbnail_path'])).execute()
+            except Exception as e: print("Live API Metadata Error:", e) 
+        # -------------------------------------------------------------
 
         for d in active_tasks:
             if d['id'] == task_id: d['status'] = "ON AIR (LIVE) 🔴"
@@ -448,7 +437,13 @@ def run_live_stream(task_id, stream_key, audio_path, bg_paths, start_time_str, e
 def index(): return render_template('index.html')
 
 @app.route('/api/get_dashboard_stats')
-def get_dashboard_stats(): return jsonify({"channels": len(database_channel), "active_tasks": len(active_tasks), "history_tasks": len(history_tasks)})
+def get_dashboard_stats(): 
+    # API ini sekarang juga mengirim data CPU & RAM ke UI
+    sys = get_system_stats()
+    return jsonify({
+        "channels": len(database_channel), "active_tasks": len(active_tasks), "history_tasks": len(history_tasks),
+        "sys_cpu": sys["cpu"], "sys_ram_pct": sys["ram_pct"], "sys_ram_text": f"{sys['ram_used']}GB / {sys['ram_total']}GB"
+    })
 
 @app.route('/api/get_schedule')
 def get_schedule(): return jsonify({"active": active_tasks, "history": history_tasks})
